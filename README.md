@@ -14,13 +14,13 @@ The following packages are required:
 * libgd
 
 On debian based system the packages could be installed as follows:
-> $ sudo apt-get install gcc cmake libsdl1.2-dev libboost-dev libgd-dev
+> sudo apt-get install gcc cmake libsdl1.2-dev libboost-dev libgd-dev
 
 ## Build instructions
 
 In the root source directory:
->  $ mkdir build
->  $ cd build
->  $ cmake ..
->  $ make -j3 # Or higher values if you have more cores than two
->  $ ./src/ray ../nff/tetra7.nff
+> mkdir build
+  cd build
+  cmake ..
+  make -j3 # Or higher values if you have more cores than two
+  ./src/ray ../nff/tetra7.nff
