@@ -27,7 +27,10 @@ include_directories(${GD_INCLUDE_DIRS})
 link_directories(${GD_LIBRARY_DIRS})
 add_definitions(${GD_DEFINITIONS})
 
-include(config.local)
+if(EXISTS config.local)
+  include(config.local)
+endif()
+
 set(CMAKE_CXX_FLAGS "-Wall -Wextra -std=c++11 -O ${CMAKE_CXX_FLAGS}")
 include_directories(${ray_SOURCE_DIR}/include)
 add_subdirectory (src)
