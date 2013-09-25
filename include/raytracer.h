@@ -10,8 +10,6 @@
 #include "area_light.h"
 #include "point_light.h"
 
-#include <boost/foreach.hpp>
-
 /// The raytracer function object class.
 class Raytracer {
 private: /* Methods: */
@@ -112,7 +110,7 @@ private:
     const Vector N = ray.normal(intr);
 
     // for each light
-    BOOST_FOREACH(const Light* l, m_scene.lights()) {
+    for (const Light* l : m_scene.lights()) {
       Vector L;
       floating shade = 0;
 
