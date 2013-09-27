@@ -10,7 +10,7 @@ link_directories(${SDL_LIBRARY_DIRS})
 add_definitions(${SDL_DEFINITIONS})
 
 # Boost
-find_package(Boost COMPONENTS thread date_time REQUIRED)
+find_package(Boost COMPONENTS thread date_time program_options REQUIRED)
 include_directories(${BOOST_INCLUDE_DIRS})
 link_directories(${BOOST_LIBRARY_DIRS})
 add_definitions(${BOOST_DEFINITIONS})
