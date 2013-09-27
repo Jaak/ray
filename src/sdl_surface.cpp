@@ -3,8 +3,6 @@
 #include "sdl_surface.h"
 
 #include <boost/thread.hpp>
-#include <boost/thread/mutex.hpp>
-#include <boost/thread/locks.hpp>
 #include <SDL/SDL.h>
 #include <iostream>
 
@@ -18,7 +16,10 @@ public: /* Methods: */
     , m_height(height)
     , m_surf{ nullptr }
     , m_stopped{ false }
-  {}
+  {
+  }
+
+  ~SDLThread() { m_boost_thread.join(); }
 
   void stop() { m_stopped = true; }
 
@@ -30,10 +31,14 @@ public: /* Methods: */
     }
 
     SDL_WM_SetCaption("Tracing...", NULL);
+    m_boost_thread = boost::thread (boost::ref(*this));
   }
 
   void setPixel(int h, int w, const Colour& c) {
     assert(m_surf);
+    if (m_stopped)
+      return;
+
     const auto r = (uint8_t)(255 * fmin(1.0, fmax(c.r, 0.0)));
     const auto g = (uint8_t)(255 * fmin(1.0, fmax(c.g, 0.0)));
     const auto b = (uint8_t)(255 * fmin(1.0, fmax(c.b, 0.0)));
@@ -47,14 +52,31 @@ public: /* Methods: */
     }
   }
 
-  void run () {
+  void handle_input() {
+    SDL_Event event;
+    while (SDL_PollEvent(&event)) {
+      if (event.type == SDL_QUIT) {
+        m_stopped = true;
+      }
+
+      if (event.type == SDL_KEYDOWN) {
+        SDLKey keyPressed = event.key.keysym.sym;
+        if (keyPressed == SDLK_ESCAPE)
+          m_stopped = true;
+      }
+    }
+  }
+
+  void operator()() {
     assert(m_surf);
     while (!m_stopped) {
       SDL_Flip(m_surf);
       boost::this_thread::sleep(boost::posix_time::milliseconds(10));
+      handle_input();
     }
 
     SDL_FreeSurface(m_surf);
+    SDL_Quit();
   }
 
 private: /* Fields: */
@@ -62,6 +84,7 @@ private: /* Fields: */
   const int m_height;
   SDL_Surface* m_surf;
   bool m_stopped;
+  boost::thread m_boost_thread;
 };
 
 SDLSurface::SDLSurface() { }
@@ -69,11 +92,8 @@ SDLSurface::SDLSurface() { }
 SDLSurface::~SDLSurface() { }
 
 void SDLSurface::init() {
-  m_thread = std::make_shared<SDLThread>(m_width, m_height);
+  m_thread = std::unique_ptr<SDLThread>(new SDLThread(m_width, m_height));
   m_thread->init();
-  auto thread = boost::thread {
-    [=](){ m_thread->run(); }
-  };
 }
 
 void SDLSurface::setPixel(int h, int w, const Colour& c) {

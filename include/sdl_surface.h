@@ -17,7 +17,7 @@ public: /* Fields: */
   void setPixel(int h, int w, const Colour&);
 
 private: /* Methods: */
-  std::shared_ptr<SDLThread> m_thread;
+  std::unique_ptr<SDLThread> m_thread;
 };
 
 #endif
