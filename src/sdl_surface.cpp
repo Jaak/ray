@@ -1,89 +1,81 @@
 
 #include "geometry.h"
-#include "SDL/SDL_opengl.h"
 #include "sdl_surface.h"
+
+#include <boost/thread.hpp>
+#include <boost/thread/mutex.hpp>
+#include <boost/thread/locks.hpp>
+#include <SDL/SDL.h>
 #include <iostream>
 
-class OGLThread {
+class SDLThread {
 public: /* Methods: */
 
-  OGLThread(SDLSurface& surf)
-    : m_screen(NULL), m_surf(surf), m_cont(true)
+  SDLThread(const SDLThread&) = delete;
+
+  SDLThread(int width, int height)
+    : m_width(width)
+    , m_height(height)
+    , m_surf{ nullptr }
+    , m_stopped{ false }
   {}
 
-  void stop() { m_cont = false; }
+  void stop() { m_stopped = true; }
 
   void init() {
-    SDL_Init(SDL_INIT_EVERYTHING);
-    SDL_GL_SetAttribute(SDL_GL_DOUBLEBUFFER, 1);
-    m_screen =
-        SDL_SetVideoMode(m_surf.m_width, m_surf.m_height, 32, SDL_OPENGL);
-    SDL_WM_SetCaption("Tracing...", NULL);
-
-    //glClearColor(0, 0, 0, 0);
-    glViewport(0, 0, m_surf.m_width, m_surf.m_height);
-    //glClear(GL_COLOR_BUFFER_BIT);
-    glMatrixMode(GL_PROJECTION);
-    glLoadIdentity();
-    glOrtho(0, m_surf.m_width, m_surf.m_height, 0, -1, 1);
-    glMatrixMode(GL_MODELVIEW);
-    glLoadIdentity();
-  }
-
-  void free() {
-    SDL_Delay(5 * 1000);
-    SDL_FreeSurface(m_screen);
-    SDL_Quit();
-  }
-
-  void operator()() {
-    init();
-
-    while (m_cont) {
-      glBegin(GL_POINTS);
-      for (int h = 0; h < m_surf.m_height; ++h) {
-        for (int w = 0; w < m_surf.m_width; ++w) {
-          const Colour& c = m_surf.m_buff[h][w];
-          glColor3f(c.r, c.g, c.b);
-          glVertex2i(w, h);
-        }
-      }
-      glEnd();
-      glFlush();
-      SDL_GL_SwapBuffers();
-      boost::this_thread::sleep(boost::posix_time::milliseconds(60));
+    SDL_Init(SDL_INIT_VIDEO);
+    m_surf = SDL_SetVideoMode(m_width, m_height, 32, SDL_HWSURFACE | SDL_DOUBLEBUF);
+    if (!m_surf) {
+      return;
     }
 
-    free();
+    SDL_WM_SetCaption("Tracing...", NULL);
+  }
+
+  void setPixel(int h, int w, const Colour& c) {
+    assert(m_surf);
+    const auto r = (uint8_t)(255 * fmin(1.0, fmax(c.r, 0.0)));
+    const auto g = (uint8_t)(255 * fmin(1.0, fmax(c.g, 0.0)));
+    const auto b = (uint8_t)(255 * fmin(1.0, fmax(c.b, 0.0)));
+    const auto bpp = m_surf->format->BytesPerPixel;
+    const auto col = SDL_MapRGB(m_surf->format, r, g, b);
+    const auto offset = h * m_surf->pitch + w * bpp;
+    if (SDL_LockSurface(m_surf) == 0) {
+      const auto pixels = (uint8_t*)m_surf->pixels;
+      std::memcpy(pixels + offset, &col, bpp);
+      SDL_UnlockSurface(m_surf);
+    }
+  }
+
+  void run () {
+    assert(m_surf);
+    while (!m_stopped) {
+      SDL_Flip(m_surf);
+      boost::this_thread::sleep(boost::posix_time::milliseconds(10));
+    }
+
+    SDL_FreeSurface(m_surf);
   }
 
 private: /* Fields: */
-  SDL_Surface* m_screen;
-  SDLSurface& m_surf;
-  bool m_cont;
+  const int m_width;
+  const int m_height;
+  SDL_Surface* m_surf;
+  bool m_stopped;
 };
 
-SDLSurface::SDLSurface() {}
+SDLSurface::SDLSurface() { }
 
-SDLSurface::~SDLSurface() {
-  m_thread_data->stop();
-  m_thread.join();
-  delete m_thread_data;
-  for (int h = 0; h < m_height; ++h) {
-    delete[] m_buff[h];
-  }
+SDLSurface::~SDLSurface() { }
 
-  delete[] m_buff;
+void SDLSurface::init() {
+  m_thread = std::make_shared<SDLThread>(m_width, m_height);
+  m_thread->init();
+  auto thread = boost::thread {
+    [=](){ m_thread->run(); }
+  };
 }
 
-void SDLSurface::init(void) {
-  m_buff = new Colour* [m_height];
-  for (int h = 0; h < m_height; ++h) {
-    m_buff[h] = new Colour[m_width];
-  }
-
-  m_thread_data = new OGLThread(*this);
-  m_thread = boost::thread(boost::ref(*m_thread_data));
+void SDLSurface::setPixel(int h, int w, const Colour& c) {
+  m_thread->setPixel(h, w, c);
 }
-
-void SDLSurface::setPixel(int h, int w, Colour const& c) { m_buff[h][w] = c; }

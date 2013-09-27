@@ -7,8 +7,6 @@ This is our projects repository for computer graphics course.
 The following packages are required:
 * gcc 4.7 or clang 3.1
 * CMake 2.6
-* OpenGL
-  + This dependency is due to me toying around, will be removed later
 * SDL
 * Boost
 * libgd
