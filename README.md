@@ -8,7 +8,7 @@ The following packages are required:
 * gcc 4.7 or clang 3.1
 * CMake 2.6
 * SDL
-* Boost
+* Boost (thread, date\_time, program\_options)
 * libgd
 
 On debian based system the packages could be installed as follows:
