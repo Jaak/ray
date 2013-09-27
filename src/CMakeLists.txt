@@ -14,7 +14,6 @@ set(SOURCEFILES
 
 add_executable(ray ${SOURCEFILES})
 target_link_libraries(ray
-  ${OPENGL_LIBRARIES}
   ${Boost_LIBRARIES}
   ${SDL_LIBRARY}
   ${GD_LIBRARIES}

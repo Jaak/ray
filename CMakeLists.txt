@@ -3,12 +3,6 @@ cmake_minimum_required (VERSION 2.6 FATAL_ERROR)
 project (ray)
 set(CMAKE_MODULE_PATH ${CMAKE_MODULE_PATH} "${CMAKE_SOURCE_DIR}/cmake/")
 
-# Opengl
-find_package(OpenGL REQUIRED)
-include_directories(${OPENGL_INCLUDE_DIRS})
-link_directories(${OPENGL_LIBRARY_DIRS})
-add_definitions(${OPENGL_DEFINITIONS})
-
 # SDL
 find_package(SDL REQUIRED)
 include_directories(${SDL_INCLUDE_DIRS})
