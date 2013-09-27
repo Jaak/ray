@@ -3,7 +3,7 @@
 
 #include <cmath>
 
-Camera::Camera(Scene const& scene) : m_scene(scene) {}
+Camera::Camera() { }
 
 // TODO: init methods are bad
 void Camera::init() {
@@ -17,8 +17,8 @@ void Camera::init() {
 }
 
 Ray Camera::spawnRay(floating hp, floating wp) const {
-  const floating w = m_scene.surface()->width();
-  const floating h = m_scene.surface()->height();
+  const floating w = m_width;
+  const floating h = m_height;
   const floating asp = w / h;
   const floating x = asp * ((((2 * wp) / (w - 1))) - 1.0);
   const floating y = -(((2 * hp) / (h - 1)) - 1.0);

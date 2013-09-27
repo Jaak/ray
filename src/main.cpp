@@ -8,45 +8,72 @@
 #include <iostream>
 #include <string>
 #include <cstdlib>
+#include <boost/program_options.hpp>
+
+namespace po = boost::program_options;
+
+void parseCommandLine(int argc, char** argv, po::options_description& desc, po::variables_map& vm) {
+  desc.add_options()
+    ("help,h",                             "Output this help message")
+    ("png",      po::value<std::string>(), "Output PNG image")
+    ("input,i",  po::value<std::string>(), "Input NFF file")
+    ("non-interactive",                    "Don't render interactively");
+
+  po::positional_options_description p;
+  p.add("input", -1);
+
+  po::store(po::command_line_parser(argc, argv).options(desc).positional(p).run(), vm);
+  po::notify(vm);
+}
 
 /**
  * TODO:
  * Major:
- *  - path tracing (bidirectional)
- *  - improved input format
+ *  - Path tracing (bidirectional)
+ *  - Improved input format (.obj, .3ds, or custom blender exporter?)
  *
  * Minor:
- *  - better command line options...
- *  - we can compute if the intersection was internal or external from
- *    ray direction and the normal...
- *  - move operator<< implementations to cpp files. this way it's sufficient to
- *    include <iosfwd>
+ *  - All of the init-s are a code smell... Initialization should always be done in the class constructor.
+ *  - The first step in implementing better importer is to rename SceneReader to SceneImporter
+ *    and make it an actual virtual class. The importer should just implement various virtual
+ *    methods that builds the scene.
+ *  - We can compute if the intersection was internal or external from ray direction and the normal...
+ *  - Move operator<< implementations to cpp files. this way it's sufficient to include <iosfwd>
  *  - The code is still not quite C++11 idiomatic.
  */
 
 int main(int argc, char** argv) {
-  if (argc < 2 || argc > 3) {
-    std::cout << "Usage:\n"
-              << "\t" << argv[0] << " "
-              << "[nff file] [destination file]\n"
-              << "If no destination file is supplied then "
-              << "\"out.png\" will be used instead." << std::endl;
+  Scene scene;
+  po::options_description desc ("Command line options:");
+  po::variables_map vm;
+  parseCommandLine(argc, argv, desc, vm);
+
+  if (vm.count("help")) {
+    std::cout << desc << std::endl;
     return EXIT_SUCCESS;
   }
 
-  Scene scene;
-  std::string file;
-
-  if (argc != 3) {
-    file = "out.png";
-  } else {
-    file = argv[2];
+  if (vm.count("input")) {
+    std::string inp_file = vm["input"].as<std::string>();
+    scene.setSceneReader(new NFFSceneReader(inp_file.c_str()));
+  }
+  else {
+    std::cerr << "No input file specified!" << std::endl;
+    std::cerr << desc << std::endl;
+    return EXIT_FAILURE;
   }
 
-  //scene.attachSurface(new PngSurface(file));
-  scene.attachSurface(new SDLSurface());
+  if (vm.count("non-interactive") == 0) {
+    scene.attachSurface(new SDLSurface());
+  }
+
+  if (vm.count("png")) {
+    std::string out_file = vm["png"].as<std::string>();
+    scene.attachSurface(new PngSurface(out_file));
+  }
+
+  // TODO: allow selection of various primitive managers
   scene.setPrimitiveManager(new KdTreePrimitiveManager());
-  scene.setSceneReader(new NFFSceneReader(argv[1]));
   scene.init();
   scene.run();
   return EXIT_SUCCESS;

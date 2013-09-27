@@ -7,16 +7,18 @@
 
 #include <iostream>
 
-class Scene;
-
 /// A camera.
 class Camera {
 public:                 /* Methods: */
-  Camera(const Scene&);
+  Camera();
 
   /// Spawns a new ray through given screen coordinates.
   Ray spawnRay(floating, floating) const;
 
+  int height() const { return m_height; }
+  int width() const { return m_width; }
+
+  void setDimensions(int h, int w) { m_height = h; m_width = w; }
   void setHither(floating h) { m_hither = h; }
   void setEye(const Point& e) { m_eye = e; }
   void setAt(const Point& a) { m_at = a; }
@@ -33,7 +35,7 @@ public:                 /* Methods: */
   friend std::ostream& operator<<(std::ostream&, Camera const&);
 
 private:             /* Fields: */
-  const Scene & m_scene; ///< Reference to scene.
+  int m_height, m_width; ///< Height and width of the screen.
   Point m_eye;           ///< Position of camera eye.
   Point m_at;            ///< Point which camera looks at.
   Vector m_up;           ///< Up vector of camera.

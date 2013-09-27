@@ -18,7 +18,7 @@ private: /* Methods: */
   Raytracer(const Raytracer&); // Not copyable.
 
   Intersection intersectWithPrims(const Ray& ray) const {
-    return m_scene.manager()->intersectWithPrims(ray);
+    return m_scene.manager().intersectWithPrims(ray);
   }
 
   Ray shootRay(const Point& from, const Point& to) const {

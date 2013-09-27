@@ -76,7 +76,10 @@ void do_view(Scene& scene, FILE* fp) {
 
   fscanf(fp, " resolution %d %d", &resx, &resy);
 
-  scene.surface()->setDimensions(resy, resx);
+  cam.setDimensions(resy, resx);
+  for (auto& surface : scene.surfaces()) {
+    surface->setDimensions(resy, resx);
+  }
 
   return;
 fmterr:

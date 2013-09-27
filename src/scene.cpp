@@ -10,11 +10,19 @@
 #include <boost/thread.hpp>
 #include <boost/date_time.hpp>
 
-Scene::~Scene() {
-  delete m_surface;
-  delete m_manager;
-  delete m_scene_reader;
+Scene::Scene()
+  : m_background (0, 0, 0)
+{ }
+
+void Scene::setPrimitiveManager(PrimitiveManager* pm) {
+  m_manager = std::unique_ptr<PrimitiveManager>(pm);
 }
+
+void Scene::setSceneReader(SceneReader* sr) {
+  m_scene_reader = std::unique_ptr<SceneReader>(sr);
+}
+
+Scene::~Scene() { }
 
 /**
  * Recursively shoots rays where needed.
@@ -181,7 +189,9 @@ public: /* Methods: */
     Colour c = Raytracer(scene)(scene.m_camera.spawnRay(m_y0, m_x0));
     for (int h = m_y0; h < m_y1; ++h) {
       for (int w = m_x0; w < m_x1; ++w) {
-        scene.m_surface->setPixel(h, w, c);
+        for (auto& surface : scene.surfaces()) {
+          surface->setPixel(h, w, c);
+        }
       }
     }
   }
@@ -189,8 +199,10 @@ public: /* Methods: */
   void renderNice(Scene& scene) {
     for (int h = m_y0; h < m_y1; ++h) {
       for (int w = m_x0; w < m_x1; ++w) {
-        scene.m_surface
-            ->setPixel(h, w, Raytracer(scene)(scene.m_camera.spawnRay(h, w)));
+        for (auto& surface : scene.surfaces()) {
+          surface->setPixel(h, w,
+            Raytracer(scene)(scene.m_camera.spawnRay(h, w)));
+        }
       }
     }
   }
@@ -275,7 +287,7 @@ void Scene::run() {
   std::vector<Block> front;
   std::vector<Block> back;
 
-  front.emplace_back(0, m_surface->height(), 0, m_surface->width());
+  front.emplace_back(0, m_camera.height(), 0, m_camera.width());
 
   for (int i = 0; i < 6; ++i)
     swap(front, back);
@@ -303,7 +315,10 @@ void Scene::run() {
 
 void Scene::init() {
   m_scene_reader->init(*this);
-  m_surface->init();
+  for (auto& surface : m_surfaces) {
+    surface->init();
+  }
+
   m_camera.init();
   m_manager->init();
 }
