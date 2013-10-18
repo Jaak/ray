@@ -37,13 +37,15 @@ In the absolute minimal set of features we will implement:
   purposes.
 
 The last goal is intentionally quite vague as at the moment we lack the
-research of better input formats. At the moment I lean towards extending the
-NFF format and implement blender exporter for that format. Potentially NFF
-format might be too limiting or inefficient so a custom input format might turn
-out to be required. Blender has extremely complicated and poorly documented
-format, and writing importer for that is not feasible. Alternative good option
-is to implement .obj or 3ds format importer. Both formats are well documented
-and already have C++ libraries for.
+research on better input formats. The first goal is to actually do the minimal
+amount research on implementing blender exporter, the 3ds and the .obj formats.
+At the moment I lean towards extending the NFF format and implement blender
+exporter for that format. Potentially NFF format might be too limiting or
+inefficient so a custom input format might turn out to be required. Blender has
+extremely complicated and poorly documented format, and writing importer for
+that is not feasible. Alternative good option is to implement .obj or 3ds
+format importer. Both formats are well documented and already have C++
+libraries for.
 
 The goal for path tracer is also minimal. Ideally we implement bidirectional
 path tracing and use some standard tricks to make it faster. The low-hanging
