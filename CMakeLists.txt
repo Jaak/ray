@@ -16,15 +16,18 @@ link_directories(${BOOST_LIBRARY_DIRS})
 add_definitions(${BOOST_DEFINITIONS})
 
 # GD
-find_package(GD REQUIRED)
-include_directories(${GD_INCLUDE_DIRS})
-link_directories(${GD_LIBRARY_DIRS})
-add_definitions(${GD_DEFINITIONS})
+find_package(GD)
+IF (GD_FOUND)
+  add_definitions( -DHAVE_GD_SUPPORT_PNG )
+  include_directories(${GD_INCLUDE_DIRS})
+  link_directories(${GD_LIBRARY_DIRS})
+  add_definitions(${GD_DEFINITIONS})
+ENDIF()
 
 if(EXISTS config.local)
   include(config.local)
 endif()
 
-set(CMAKE_CXX_FLAGS "-Wall -Wextra -std=c++11 -O ${CMAKE_CXX_FLAGS}")
+list(APPEND CMAKE_CXX_FLAGS "-std=c++11 ${CMAKE_CXX_FLAGS}")
 include_directories(${ray_SOURCE_DIR}/include)
 add_subdirectory (src)

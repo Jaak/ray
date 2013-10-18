@@ -6,11 +6,15 @@ set(SOURCEFILES
     naive_primitive_manager.cpp
     nff_scene_reader.cpp
     parser.cpp
-    png_surface.cpp
+    tga_surface.cpp
     ray.cpp
     scene.cpp
     sdl_surface.cpp
-    )
+)
+
+IF(GD_FOUND)
+  list(APPEND SOURCEFILES png_surface.cpp)
+ENDIF()
 
 add_executable(ray ${SOURCEFILES})
 target_link_libraries(ray

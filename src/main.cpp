@@ -1,21 +1,28 @@
-#include "scene.h"
-#include "png_surface.h"
-#include "sdl_surface.h"
 #include "kdtree_primitive_manager.h"
 #include "naive_primitive_manager.h"
 #include "nff_scene_reader.h"
+#include "scene.h"
+#include "sdl_surface.h"
+#include "tga_surface.h"
 
+#ifdef HAVE_GD_SUPPORT_PNG
+  #include "png_surface.h"
+#endif
+
+#include <boost/program_options.hpp>
+#include <cstdlib>
 #include <iostream>
 #include <string>
-#include <cstdlib>
-#include <boost/program_options.hpp>
 
 namespace po = boost::program_options;
 
 void parseCommandLine(int argc, char** argv, po::options_description& desc, po::variables_map& vm) {
   desc.add_options()
     ("help,h",                             "Output this help message")
+#ifdef HAVE_GD_SUPPORT_PNG
     ("png",      po::value<std::string>(), "Output PNG image")
+#endif
+    ("tga",      po::value<std::string>(), "Output TGA image")
     ("input,i",  po::value<std::string>(), "Input NFF file")
     ("non-interactive",                    "Don't render interactively");
 
@@ -67,9 +74,16 @@ int main(int argc, char** argv) {
     scene.attachSurface(new SDLSurface());
   }
 
+#ifdef HAVE_GD_SUPPORT_PNG
   if (vm.count("png")) {
     std::string out_file = vm["png"].as<std::string>();
     scene.attachSurface(new PngSurface(out_file));
+  }
+#endif
+
+  if (vm.count("tga")) {
+    std::string out_file = vm["tga"].as<std::string>();
+    scene.attachSurface(new TgaSurface(out_file));
   }
 
   // TODO: allow selection of various primitive managers

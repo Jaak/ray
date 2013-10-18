@@ -176,6 +176,15 @@ public: /* Methods: */
     return fabs(this->r - c.r) + fabs(this->g - c.g) + fabs(this->b - c.b);
   }
 
+  uint32_t getPixel () const {
+    using namespace std;
+    uint32_t pix = 0;
+    pix  = (uint32_t)(255 * fmin(1.0, fmax(r, 0.0))) << 16;
+    pix |= (uint32_t)(255 * fmin(1.0, fmax(g, 0.0))) << 8;
+    pix |= (uint32_t)(255 * fmin(1.0, fmax(b, 0.0)));
+    return pix;
+  }
+
   bool close(const Colour& c) const { return almost_zero(diff(c)); }
 
   friend std::ostream& operator<<(std::ostream& os, const Colour& p) {

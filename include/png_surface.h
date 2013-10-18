@@ -25,11 +25,7 @@ public: /* Methods: */
   void init();
 
   void setPixel(int h, int w, Colour const& c) {
-    using namespace std;
-    int& pix = data[h][w];
-    pix = (int)(255 * fmin(1.0, fmax(c.r, 0.0))) << 16;
-    pix |= (int)(255 * fmin(1.0, fmax(c.g, 0.0))) << 8;
-    pix |= (int)(255 * fmin(1.0, fmax(c.b, 0.0)));
+    data[h][w] = c.getPixel();
   }
 
 private: /* Fields: */
