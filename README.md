@@ -56,8 +56,11 @@ methods are discussed in a
 
 ### Concerning importers/exporters
 
-* An implementation for Blender exporter for NFF format
+* An implementation for Blender exporter for NFF format.
+
 This task is a good opportunity to familiarize oneself with Blender Python API modules, especially bpy.data, and writing scripts for Blender. The first step would be to use this API for extracting the data followed by writing it into a .nff file (using Python I/O). The task should not be very difficult since there are several codes for Blender exporters avalable which can be used for guidance, e.g see [DirectX exporter](https://projects.blender.org/tracker/index.php?func=detail&aid=22795). 
-* .obj exporter for the ray tracer
+
+* .obj exporter for the ray tracer.
+
 Since we want the ray tracer to support at least one of the most widely used file formats, we are planning to implement an .obj importer. The first step would be to implement a simple test programme for reading in data from the .obj file and putting it into the data structures similar to the ones the ray tracer uses. Then the programme can be integrated to the ray tracer. Another thought is to additionally implement a 3ds format importer. Howeve, this might be a bit more time-consuming since 3ds is in a binary format. Both OBJ ja 3ds formats are well documented and have C++
 libraries.
