@@ -277,7 +277,6 @@ void Scene::run() {
 
   using namespace boost::posix_time;
 
-  boost::thread_group threads;
   ptime start_time = microsec_clock::local_time();
 
   nP = std::max(boost::thread::hardware_concurrency(), 1u);
@@ -292,21 +291,27 @@ void Scene::run() {
   for (int i = 0; i < 6; ++i)
     swap(front, back);
 
-  // first we render a rough scene
-  for (int i = 0; i < nP; ++i) {
-    threads.create_thread(Task(i, nP, front, *this, Rough));
-  }
+  { // first we render a rough scene
+    boost::thread_group threads;
+    for (int i = 0; i < nP; ++i) {
+      threads.create_thread(Task(i, nP, front, *this, Rough));
+    }
 
-  threads.join_all();
-  std::cout << "Rough done..." << std::endl;
+    threads.join_all();
+    std::cout << "Rough done..." << std::endl;
+  }
 
   swap(front, back);
 
-  for (int i = 0; i < nP; ++i) {
-    threads.create_thread(Task(i, nP, front, *this, Nice));
+  { // render good scene
+    boost::thread_group threads;
+    for (int i = 0; i < nP; ++i) {
+      threads.create_thread(Task(i, nP, front, *this, Nice));
+    }
+
+    threads.join_all();
   }
 
-  threads.join_all();
   time_duration td =
       time_period(start_time, microsec_clock::local_time()).length();
   std::cout << "Took " << td << std::endl;
