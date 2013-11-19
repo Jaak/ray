@@ -32,8 +32,11 @@ private: /* Methods: */
 
 public:
 
-  Raytracer(Scene& s) : m_scene(s), m_col(0, 0, 0), gen() { }
-  ~Raytracer() { }
+  Raytracer(Scene& s)
+    : m_scene(s)
+    , m_col(0, 0, 0)
+    , gen()
+  { }
 
   const Colour& operator () (Ray ray) {
     run (ray);
@@ -105,11 +108,10 @@ private:
       return;
     }
 
-    const Point point = intr.point(); // point of intersection
-    const Vector V = ray.dir(); // view direction vector
+    const Point point = intr.point();
+    const Vector V = ray.dir();
     const Vector N = ray.normal(intr);
 
-    // for each light
     for (const Light* l : m_scene.lights()) {
       Vector L;
       floating shade = 0;
@@ -167,9 +169,7 @@ private:
         Colour transp = { 1, 1, 1 };
         if (intr.isInternal()) {
           const Colour t = -intr.dist() * 0.15 * m.colour();
-          transp[Axes::X] = expf(t[Axes::X]);
-          transp[Axes::Y] = expf(t[Axes::Y]);
-          transp[Axes::Z] = expf(t[Axes::Z]);
+          transp = expf (t);
         }
 
         run(shootRay(point, T), depth + 1, n2, m.t() * acc * transp);

@@ -209,4 +209,8 @@ inline Colour operator*(floating s, const Colour& c2) {
   return { s * c2.r, s * c2.g, s * c2.b };
 }
 
+inline Colour expf(const Colour& c) {
+  return { expf(c.r), expf(c.g), expf(c.b) };
+}
+
 #endif
