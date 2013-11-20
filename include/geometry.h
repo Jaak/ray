@@ -179,9 +179,9 @@ public: /* Methods: */
   uint32_t getPixel () const {
     using namespace std;
     uint32_t pix = 0;
-    pix  = (uint32_t)(255 * fmin(1.0, fmax(r, 0.0))) << 16;
-    pix |= (uint32_t)(255 * fmin(1.0, fmax(g, 0.0))) << 8;
-    pix |= (uint32_t)(255 * fmin(1.0, fmax(b, 0.0)));
+    pix  = (uint32_t)(255.0 * pow(clamp(r, 0.0, 1.0), 1.0/2.2)) << 16;
+    pix |= (uint32_t)(255.0 * pow(clamp(g, 0.0, 1.0), 1.0/2.2)) << 8;
+    pix |= (uint32_t)(255.0 * pow(clamp(b, 0.0, 1.0), 1.0/2.2));
     return pix;
   }
 
