@@ -1,6 +1,6 @@
 cmake_minimum_required (VERSION 2.6 FATAL_ERROR)
 
-project (ray)
+project ("ray" "CXX" "C")
 set(CMAKE_MODULE_PATH ${CMAKE_MODULE_PATH} "${CMAKE_SOURCE_DIR}/cmake/")
 
 # SDL
@@ -24,10 +24,6 @@ IF (GD_FOUND)
   add_definitions(${GD_DEFINITIONS})
 ENDIF()
 
-if(EXISTS config.local)
-  include(config.local)
-endif()
-
-list(APPEND CMAKE_CXX_FLAGS "-std=c++11 ${CMAKE_CXX_FLAGS}")
+include(config.local OPTIONAL)
 include_directories(${ray_SOURCE_DIR}/include)
 add_subdirectory (src)
