@@ -1,14 +1,14 @@
-#include "common.h"
 #include "camera.h"
-#include "scene.h"
+#include "common.h"
 #include "parser.h"
-#include "raytracer.h"
 #include "pixel.h"
+#include "raytracer.h"
+#include "scene.h"
 #include "scene_reader.h"
 
-#include <string>
-#include <boost/thread.hpp>
 #include <boost/date_time.hpp>
+#include <boost/thread.hpp>
+#include <string>
 
 Scene::Scene()
   : m_background (0, 0, 0)
@@ -113,7 +113,7 @@ public: /* Methods: */
     : m_y0(y0), m_y1(y1), m_x0(x0), m_x1(x1)
   { }
 
-  void renderRough(Scene& scene) {
+  void renderRough(Scene& scene) const {
     Colour c = Raytracer(scene)(scene.m_camera.spawnRay(m_y0, m_x0));
     for (auto& surface : scene.surfaces()) {
       for (int h = m_y0; h < m_y1; ++h) {
@@ -124,7 +124,7 @@ public: /* Methods: */
     }
   }
 
-  void renderNice(Scene& scene) {
+  void renderNice(Scene& scene) const {
     for (auto& surface : scene.surfaces()) {
       for (int h = m_y0; h < m_y1; ++h) {
         for (int w = m_x0; w < m_x1; ++w) {
@@ -150,7 +150,7 @@ public: /* Methods: */
   }
 
 private: /* Fields: */
-  int m_y0, m_y1, m_x0, m_x1;
+  const int m_y0, m_y1, m_x0, m_x1;
 };
 
 enum TaskType { Rough = 0, Nice };
