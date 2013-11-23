@@ -1,9 +1,10 @@
 #ifndef RAY_POINT_LIGHT_H
 #define RAY_POINT_LIGHT_H
 
-#include "sphere.h"
 #include "geometry.h"
 #include "light.h"
+#include "random.h"
+#include "sphere.h"
 
 /// Point light source.
 class PointLight : public Sphere, public Light {
@@ -17,8 +18,8 @@ public: /* Methods: */
 
   bool is_light(void) const { return true; }
 
-  Ray emit(Random& gen) const {
-    const Vector u = { gen() - 0.5, gen() - 0.5, gen() - 0.5 };
+  Ray emit() const {
+    const Vector u = { rng() - 0.5, rng() - 0.5, rng() - 0.5 };
     const Vector v = normalised(u);
     const Point p = center() + 2.0 * ray_epsilon * v;
     return { p, v };

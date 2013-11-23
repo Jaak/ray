@@ -6,7 +6,6 @@
 
 class Intersection;
 
-/// A ray.
 class Ray {
 public:
 

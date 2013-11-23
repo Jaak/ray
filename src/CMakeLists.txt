@@ -1,15 +1,16 @@
 set(SOURCEFILES
-    main.cpp
     camera.cpp
     intersection.cpp
     kdtree_primitive_manager.cpp
+    main.cpp
     naive_primitive_manager.cpp
     nff_scene_reader.cpp
     parser.cpp
-    tga_surface.cpp
+    random.cpp
     ray.cpp
     scene.cpp
     sdl_surface.cpp
+    tga_surface.cpp
 )
 
 IF(GD_FOUND)

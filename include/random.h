@@ -3,20 +3,15 @@
 
 #include "common.h"
 
-#include <boost/random.hpp>
+#include <random>
 
-// TODO: fix this crap...
+typedef std::mt19937 Engine;
 
-typedef boost::mt19937 Engine;
-typedef boost::uniform_real<floating > Distribution;
-typedef boost::variate_generator<Engine&, Distribution > RandomBase;
+Engine& rng_engine ();
 
-class Random : public RandomBase {
-public: /* Methods: */
-  Random() : RandomBase(m_gen, Distribution(0, 1)) {}
-
-private: /* Fields: */
-  Engine m_gen;
-};
+static inline floating rng () {
+  static auto dist = std::uniform_real_distribution<floating >{0, 1};
+  return dist (rng_engine ());
+}
 
 #endif
