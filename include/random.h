@@ -15,6 +15,12 @@ static inline floating rng () {
   return dist (rng_engine ());
 }
 
+// TODO: how slow is it to create a new distribution?
+template <typename T>
+static inline T rngInt (const T n) {
+    return std::uniform_int_distribution<T>{T {0}, n}(rng_engine ());
+}
+
 // TODO: make sure that this is uniform...
 static inline Vector rngHemisphere () {
     const auto f1 = sqrt (rng ());
