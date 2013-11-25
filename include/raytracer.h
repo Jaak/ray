@@ -10,20 +10,70 @@
 #include "ray.h"
 #include "scene.h"
 
-#include <array>
-
-struct Vertex {
-  Vector     m_pos;
-  Vector     m_normal;
-  Colour     m_col;
-  Primitive* m_prim;
-  floating   m_pr;
+enum EventType {
+    DIFFUSE,
+    REFLECT,
+    REFRACT
 };
 
-// Possible to optimize this to std::array as we have bounded recursion depth
+// TODO: i think that our material representation is all wrong...
+
+static inline EventType getEventType (const Material& m) {
+    const auto total = m.kd () + m.ks () + m.t ();
+    const auto r = total*rng ();
+    if (r < m.kd ())           return DIFFUSE;
+    if (r < m.kd () + m.kd ()) return REFLECT;
+    return REFRACT;
+}
+
+static inline floating diffusePr (const Material& m) {
+    return m.kd () / (m.kd () + m.ks () + m.t ());
+}
+
+static inline floating reflectPr (const Material& m) {
+    return m.ks () / (m.kd () + m.ks () + m.t ());
+}
+
+static inline floating refractPr (const Material& m) {
+    return m.t () / (m.kd () + m.ks () + m.t ());
+}
+
+struct Vertex {
+  Point            m_pos;
+  Vector           m_normal;
+  Colour           m_col;
+  const Primitive* m_prim;
+  floating         m_pr;
+  EventType        m_event;
+
+  Vertex (const Point& pos, const Vector& normal, const Colour& col, const Primitive* prim, floating pr, EventType event)
+      : m_pos {pos}
+      , m_normal {normal}
+      , m_col {col}
+      , m_prim {prim}
+      , m_pr {pr}
+      , m_event {event}
+  { }
+};
+
 using VertexList = std::vector<Vertex>;
 
-/// The raytracer function object class.
+floating generationPr (const Vertex& from, const Vertex& to) {
+    switch (from.m_event) {
+    case DIFFUSE: {
+        const auto dir = normalised (to.m_pos - from.m_pos);
+        const auto cosT = from.m_normal.dot (dir);
+        return cosT <= 0.0 ? 0.0 : 1.0 / (2.0 * M_PI * cosT);
+    }
+    case REFLECT:
+    case REFRACT:
+        return 1.0;
+    }
+}
+
+/**
+ * The raytracer function object class. Determins colour of a single pixel.
+ */
 class Raytracer {
 private: /* Methods: */
 
@@ -43,7 +93,26 @@ private: /* Methods: */
     return { from + d*ray_epsilon, d };
   }
 
-public:
+
+  floating geometryTerm (const Vertex& from, const Vertex& to) {
+      const auto sqLen = (to.m_pos - from.m_pos).sqrlength ();
+      const auto from2to = normalised (from.m_pos - to.m_pos);
+      const auto to2from = normalised (to.m_pos - from.m_pos);
+      const auto testRay = Ray { from.m_pos.nudgePoint (from2to), from2to };
+      const auto intr = intersectWithPrims (testRay);
+      const auto c0 = from.m_normal.dot(from2to);
+      const auto c1 = to.m_normal.dot(to2from);
+
+      if (c0 >= 0.0 && c1 >= 0.0 && fabs (intr.dist () - sqrt(sqLen)) < epsilon) {
+          return c0 * c1 / sqLen;
+      }
+      else {
+           return 0.0;
+      }
+  }
+
+
+public: /* Methods: */
 
   Raytracer(Scene& s)
     : m_scene(s)
@@ -55,7 +124,7 @@ public:
     return m_col;
   }
 
-private:
+private: /* Methods: */
 
   /*****************************
    * Bidirectional path tracer *
@@ -75,12 +144,58 @@ private:
     const auto orientingN = N.dot(V) < 0.0 ? N : -1.0 * N;
 
     floating pr = std::max (objCol.r, std::max (objCol.g, objCol.b));
+
+    // If some recursion depth is exeeded terminate with some probability
     if (depth > RAY_MAX_REC_DEPTH) {
+        if (pr <= rng ()) {
+            // DIFFUSE? need some other kind of ray event?
+            vertices.emplace_back (point, orientingN, m_scene.background (), prim, 0.0, DIFFUSE);
+            return;
+        }
     }
     else {
-      pr = 1.0;
+        pr = 1.0;
     }
 
+    switch (getEventType (m)) {
+    case DIFFUSE: {
+        const auto dir = rngHemisphereVector (orientingN);
+        const auto R = Ray { point.nudgePoint (dir), dir };
+        vertices.emplace_back (point, orientingN, objCol / M_PI, prim, pr / M_PI, DIFFUSE);
+        trace (R, depth + 1, iior, vertices);
+    }   break;
+    case REFLECT: {
+        const auto dir = reflect (V, N);
+        const auto R = Ray { point.nudgePoint (dir), dir };
+        vertices.emplace_back (point, orientingN, objCol, prim, pr, REFLECT);
+        trace (R, depth + 1, iior, vertices);
+    }   break;
+    case REFRACT:
+        assert (false && "No support for refraction in path tracer yet!");
+        break;
+    }
+  }
+
+  VertexList traceEye (const Ray& R) {
+      VertexList vertices;
+      vertices.reserve (RAY_MAX_REC_DEPTH);
+      trace (R, 1, 1.0, vertices);
+      return std::move (vertices);
+  }
+
+  // TODO: all lights emit same intensity light!
+  // TODO: we only support point lights for now!
+  VertexList traceLight () {
+      assert (! m_scene.lights ().empty ());
+      const auto nLights = m_scene.lights ().size ();
+      const floating lightPr = 1.0 / (floating) nLights;
+      const auto light = m_scene.lights ()[nLights - 1];
+      const auto R = light->emit ();
+
+      VertexList vertices;
+      vertices.reserve (RAY_MAX_REC_DEPTH);
+      trace (R, 1, pr, vertices);
+      return std::move (vertices);
   }
 
   /**********************
@@ -143,11 +258,14 @@ private:
           break;
       }
 
+      if (almost_zero(shade)) {
+        continue;
+      }
+
       // if not, then compute the lighting
-      const floating dot_NL = L.dot(N);
-      const Vector R = normalised(L - (2 * dot_NL) * N);
+      const Vector R = reflect (L, N);
       const floating C = 1.0;
-      const floating kd = m.kd() * fmax(0.0, dot_NL);
+      const floating kd = m.kd() * fmax(0.0, L.dot(N));
       const floating ks = m.ks() * pow(fmax(0.0, V.dot(R)), m.phong_pow());
 
       // diffuse
@@ -161,7 +279,7 @@ private:
 
     // refraction
     if (m.t() > 0) {
-      const Vector N2 = N; // * (intr.isExternal () ? -1 : 1);
+      const Vector N2 = N;
       floating n1 = iior, n2 = m.ior();
 
       // TODO: right now we assume that we are always exiting to air
@@ -180,11 +298,11 @@ private:
         const Vector T = n * V + (n * cosT1 + cosT2sqrt) * N2;
         Colour transp = { 1, 1, 1 }; // transparency of the object
         if (intr.isInternal()) { // Beer-Lambert law
-          const Colour t = -intr.dist() * m.t() * m.colour();
+          const Colour t = -intr.dist() * 0.15 * m.colour();
           transp = expf (t);
         }
 
-        run(shootRay(point, T), depth + 1, n2, acc * transp);
+        run(shootRay(point, T), depth + 1, n2, m.t() * acc * transp);
       }
     }
   }
