@@ -176,6 +176,7 @@ private: /* Methods: */
     }
   }
 
+  // TODO: should we add the initial point as a vertex?
   VertexList traceEye (const Ray& R) {
       VertexList vertices;
       vertices.reserve (RAY_MAX_REC_DEPTH);
@@ -185,6 +186,7 @@ private: /* Methods: */
 
   // TODO: all lights emit same intensity light!
   // TODO: we only support point lights for now!
+  // TODO: should we add the initial point as a vertex?
   VertexList traceLight () {
       assert (! m_scene.lights ().empty ());
       const auto nLights = m_scene.lights ().size ();
@@ -196,6 +198,18 @@ private: /* Methods: */
       vertices.reserve (RAY_MAX_REC_DEPTH);
       trace (R, 1, pr, vertices);
       return std::move (vertices);
+  }
+
+  Colour radiance (const VertexList& eyeVertices, const VertexList& lightVertices) {
+      const auto NE = eyeVertices.size ();
+      const auto NL = lightVertices.size ();
+
+//      std::vector<Colour> alpha_L (NL + 1);
+//      alpha_L[0] = Colour { 1.0, 1.0, 1.0 };
+//      if (NL >= 1) {
+//          alpha_L[1] = Colour
+//      }
+      return Colour { 0.0, 0.0, 0.0 };
   }
 
   /**********************
