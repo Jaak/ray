@@ -135,7 +135,7 @@ public: /* Methods: */
       : Vector{ x, y, z, w } {}
 
   // Assume that the vector v is normalized
-  Point nudgePoint(const Vector& v);
+  Point nudgePoint(const Vector& v) const;
 
   floating dist(const Point& p) const { return (*this - p).length(); }
 
@@ -153,8 +153,12 @@ inline Point operator+(const Point& p, const Vector& v) {
 
 inline Point operator+(const Vector& v, const Point& p) { return p + v; }
 
-inline Point Point::nudgePoint(const Vector& v) {
+inline Point Point::nudgePoint(const Vector& v) const {
   return *this + ray_epsilon * v;
+}
+
+inline Vector reflect (const Vector& I, const Vector& N) {
+  return I - 2.0 * N.dot(I) * N;
 }
 
 /****************************
