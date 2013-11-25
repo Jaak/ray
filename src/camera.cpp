@@ -16,6 +16,9 @@ void Camera::init() {
   m_up = a * m_up;
 }
 
+// TODO: this can be optimized quite a bit, almost all of the computation here
+// can be cached inside camera object. This is ok, as we only have one of those
+// anyways.
 Ray Camera::spawnRay(floating hp, floating wp) const {
   const floating w = m_width;
   const floating h = m_height;
