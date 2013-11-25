@@ -13,17 +13,64 @@ set(SOURCEFILES
     tga_surface.cpp
 )
 
+set(RAY_INCLUDE_DIR "${CMAKE_SOURCE_DIR}/include/")
+
+set(INCLUDEFILES
+  "${RAY_INCLUDE_DIR}/aabb.h"
+  "${RAY_INCLUDE_DIR}/area_light.h"
+  "${RAY_INCLUDE_DIR}/camera.h"
+  "${RAY_INCLUDE_DIR}/common.h"
+  "${RAY_INCLUDE_DIR}/geometry.h"
+  "${RAY_INCLUDE_DIR}/intersection.h"
+  "${RAY_INCLUDE_DIR}/itriangle.h"
+  "${RAY_INCLUDE_DIR}/kdtree_primitive_manager.h"
+  "${RAY_INCLUDE_DIR}/light.h"
+  "${RAY_INCLUDE_DIR}/material.h"
+  "${RAY_INCLUDE_DIR}/materials.h"
+  "${RAY_INCLUDE_DIR}/naive_primitive_manager.h"
+  "${RAY_INCLUDE_DIR}/nff_scene_reader.h"
+  "${RAY_INCLUDE_DIR}/parser.h"
+  "${RAY_INCLUDE_DIR}/pixel.h"
+  "${RAY_INCLUDE_DIR}/png_surface.h"
+  "${RAY_INCLUDE_DIR}/point_light.h"
+  "${RAY_INCLUDE_DIR}/primitive.h"
+  "${RAY_INCLUDE_DIR}/primitive_manager.h"
+  "${RAY_INCLUDE_DIR}/random.h"
+  "${RAY_INCLUDE_DIR}/ray.h"
+  "${RAY_INCLUDE_DIR}/raytracer.h"
+  "${RAY_INCLUDE_DIR}/rectangle.h"
+  "${RAY_INCLUDE_DIR}/scene.h"
+  "${RAY_INCLUDE_DIR}/scene_reader.h"
+  "${RAY_INCLUDE_DIR}/sdl_surface.h"
+  "${RAY_INCLUDE_DIR}/sphere.h"
+  "${RAY_INCLUDE_DIR}/surface.h"
+  "${RAY_INCLUDE_DIR}/tga_surface.h"
+  "${RAY_INCLUDE_DIR}/triangle.h"
+)
+
 IF(GD_FOUND)
   list(APPEND SOURCEFILES png_surface.cpp)
 ENDIF()
 
 set_source_files_properties(${SOURCEFILES}
   PROPERTIES
-  COMPILE_FLAGS "-std=c++11")
+  COMPILE_FLAGS "-std=c++11"
+)
 
-add_executable(ray ${SOURCEFILES})
+add_executable(ray
+  ${SOURCEFILES}
+  ${INCLUDEFILES}
+)
+
+include_directories(ray
+  "${RAY_INCLUDE_DIR}"
+  ${Boost_INCLUDE_DIRS}
+  ${GD_INCLUDE_DIRS}
+  ${SDL_INCLUDE_DIRS}
+)
+
 target_link_libraries(ray
   ${Boost_LIBRARIES}
   ${SDL_LIBRARY}
   ${GD_LIBRARIES}
-  )
+)
