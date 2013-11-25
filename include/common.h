@@ -18,11 +18,11 @@ constexpr floating epsilon = 1e-5; // std::numeric_limits<floating>::epsilon ();
 constexpr floating ray_epsilon = 1e-5;
 
 inline bool almost_equal(floating x, floating y, int ulp = 1) {
-  return fabs(x - y) < epsilon * fmax(fabs(x), fabs(y)) * ulp;
+  return fabs(x - y) <= epsilon * fmax(fabs(x), fabs(y)) * ulp;
 }
 
 inline bool almost_zero(floating x, int ulp = 1) {
-  return fabs(x) < epsilon * fabs(x) * ulp;
+  return fabs(x) <= epsilon * fabs(x) * ulp;
 }
 
 inline floating clamp (floating x, floating mn = 0.0, floating mx = 1.0) {
