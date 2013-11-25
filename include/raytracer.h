@@ -196,7 +196,7 @@ private: /* Methods: */
 
       VertexList vertices;
       vertices.reserve (RAY_MAX_REC_DEPTH);
-      trace (R, 1, pr, vertices);
+      trace (R, 1, lightPr, vertices);
       return std::move (vertices);
   }
 
