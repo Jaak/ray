@@ -45,21 +45,21 @@ struct Node {
   PrimPtr* prims () { return &m_prims[0]; }
 
   // TODO: return std::unique_ptr?
-  static Node* make (const PrimList& prims = PrimList ()) {
-    size_t len = prims.size ();
-    void* memptr = malloc (sizeof (Node) + len*sizeof(PrimPtr));
-    Node* out = new (memptr) Node ();
+  static Node *make(const PrimList &prims = PrimList()) {
+    size_t len = prims.size();
+    void *memptr = malloc(sizeof(Node) + len * sizeof(PrimPtr));
+    Node *out = new (memptr) Node();
 
     size_t i = 0;
-    for (Primitive* prim : prims) {
-      out->m_prims[i ++] = prim;
+    for (Primitive *prim : prims) {
+      out->m_prims[i++] = prim;
     }
 
     out->m_prims[i] = nullptr;
     return out;
   }
 
-  static void release(Node* node) {
+  static void release(Node *node) {
     if (node) {
       Node::release(node->m_left);
       Node::release(node->m_right);
@@ -67,9 +67,7 @@ struct Node {
     }
   }
 
-  friend std::ostream& operator<<(std::ostream& o, const Node&) {
-    return o;
-  }
+  friend std::ostream &operator<<(std::ostream &o, const Node &) { return o; }
 };
 
 static unsigned long long icount = 0;
@@ -217,48 +215,50 @@ floating getOptimalSplitPosition(const PrimList& plist, Aabb const& box, Axes& a
   return bestPos;
 }
 
-Node* buildKDTree (const PrimList& prims, const Aabb& box, int depth = 0)
-{
-  if (prims.empty ())
-    return Node::make ();
+Node *buildKDTree(const PrimList &prims, const Aabb &box, int depth = 0) {
+  if (prims.empty())
+    return Node::make();
 
   if (depth >= 20)
-    return Node::make (prims);
+    return Node::make(prims);
 
   Aabb leftBox, rightBox;
   Axes axis = Axes::None;
   const floating split = getOptimalSplitPosition(prims, box, axis);
   box.split_at(leftBox, rightBox, axis, split);
 
-  if (leftBox.volume () <= epsilon || rightBox.volume () <= epsilon)
-    return Node::make (prims);
+  if (leftBox.volume() <= epsilon || rightBox.volume() <= epsilon)
+    return Node::make(prims);
 
   PrimList lefts, rights;
-  for (Primitive* p : prims) {
+  for (Primitive *p : prims) {
     if (p->getLeftExtreme(axis) < split) {
-      lefts.push_back (p);
+      lefts.push_back(p);
     }
 
     if (p->getRightExtreme(axis) >= split) {
-      rights.push_back (p);
+      rights.push_back(p);
     }
   }
 
-  Node* out = Node::make ();
+  Node *out = Node::make();
   out->m_split = split;
   out->m_axis = axis;
-  out->m_left = buildKDTree (lefts, leftBox, depth + 1);
-  out->m_right = buildKDTree (rights, rightBox, depth + 1);
+  out->m_left = buildKDTree(lefts, leftBox, depth + 1);
+  out->m_right = buildKDTree(rights, rightBox, depth + 1);
   return out;
 }
 
 void KdTreePrimitiveManager::init() {
+  if (m_prims.empty())
+    return;
+
   for (Axes i = Axes::X; i != Axes::None; ++i) {
-    m_bbox.m_p1[i] = m_prims.front ()->getLeftExtreme(i);
-    m_bbox.m_p2[i] = m_prims.front ()->getRightExtreme(i);
+    m_bbox.m_p1[i] = m_prims.front()->getLeftExtreme(i);
+    m_bbox.m_p2[i] = m_prims.front()->getRightExtreme(i);
   }
 
-  for (Primitive* prim : m_prims) {
+  for (Primitive *prim : m_prims) {
     for (Axes i = Axes::X; i != Axes::None; ++i) {
       const floating l = prim->getLeftExtreme(i);
       const floating r = prim->getRightExtreme(i);
@@ -267,14 +267,14 @@ void KdTreePrimitiveManager::init() {
     }
   }
 
-  m_root = buildKDTree (m_prims, m_bbox);
+  m_root = buildKDTree(m_prims, m_bbox);
   std::cerr << "KD Tree built! Tree has " << m_root->treeSize() << " nodes."
             << std::endl;
 }
 
-void KdTreePrimitiveManager::addPrimitive(Primitive* p) {
-  assert (p != nullptr);
-  m_prims.push_back (p);
+void KdTreePrimitiveManager::addPrimitive(Primitive *p) {
+  assert(p != nullptr);
+  m_prims.push_back(p);
 }
 
 /**
