@@ -62,7 +62,6 @@ public:
       m_point[axis] + m_v[axis] + m_u[axis])));
   }
 
-  bool is_light() const { return false; }
   void output(std::ostream&) const { }
 
 protected:

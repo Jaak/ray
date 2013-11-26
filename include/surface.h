@@ -5,9 +5,8 @@ class Colour;
 
 class Surface {
 public: /* Methods: */
-  Surface() {}
 
-  virtual ~Surface() {};
+  virtual ~Surface() { }
 
   int height() const { return m_height; }
   int width() const { return m_width; }
