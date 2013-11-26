@@ -10,13 +10,18 @@
 #include "ray.h"
 #include "scene.h"
 
+#include <boost/range/adaptor/reversed.hpp>
 #include <map>
 
 enum EventType {
     DIFFUSE,
     REFLECT,
-    REFRACT
+    REFRACT,
+    LIGHT,
+    EYE
 };
+
+constexpr floating emission = 100.0;
 
 // TODO: i think that our material representation is all wrong...
 
@@ -43,7 +48,7 @@ static inline floating refractPr (const Material& m) {
 struct Vertex {
   Point            m_pos;
   Vector           m_normal;
-  Colour           m_col;
+  Colour           m_col; // TODO: use proper BRDF here
   const Primitive* m_prim;
   floating         m_pr;
   EventType        m_event;
@@ -58,19 +63,53 @@ struct Vertex {
   { }
 };
 
+template <typename T>
+class table : std::vector<T> {
+public: /* Methods: */
+
+    table (size_t width, size_t height, T def = T ())
+        : std::vector<T>(width*height, def)
+        , m_width { width }
+        , m_height { height }
+    { }
+
+    T& operator () (size_t i, size_t j) {
+        assert (i < m_width && j < m_height);
+        return (*this)[i*m_height + j];
+    }
+
+    const T& operator () (size_t i, size_t j) const {
+        assert (i < m_width && j < m_height);
+        return (*this)[i*m_height + j];
+    }
+
+private: /* Fields: */
+    const size_t m_width;
+    const size_t m_height;
+};
+
 using VertexList = std::vector<Vertex>;
 
-floating generationPr (const Vertex& from, const Vertex& to) {
-    switch (from.m_event) {
+floating generationPr (const Vertex* from, const Vertex* to) {
+    assert (from != nullptr && to != nullptr);
+    switch (from->m_event) {
     case DIFFUSE: {
-        const auto dir = normalised (to.m_pos - from.m_pos);
-        const auto cosT = from.m_normal.dot (dir);
+        const auto dir = normalised (to->m_pos - from->m_pos);
+        const auto cosT = from->m_normal.dot (dir);
         return cosT <= 0.0 ? 0.0 : 1.0 / (2.0 * M_PI * cosT);
     }
     case REFLECT:
     case REFRACT:
         return 1.0;
+    case LIGHT:
+    case EYE:
+        return 0.0; // ??
     }
+}
+
+// TODO: proper brdf, this thing is a huge hack
+Colour brdf (const Material& m, const Vector& in, const Vector& out) {
+    return m.colour () * (diffusePr (m) / M_PI + reflectPr (m) + refractPr (m));
 }
 
 /**
@@ -120,11 +159,12 @@ private: /* Methods: */
       : m_self (self)
     { }
 
-    floating operator () (const Vertex& from, const Vertex& to) {
-      const auto k = std::make_pair (&from, &to);
+    floating operator () (const Vertex* from, const Vertex* to) {
+      assert (from != nullptr && to != nullptr);
+      const auto k = std::make_pair (from, to);
       auto it = find (k);
       if (it == end ()) {
-        const auto factor = m_self.geometricFactor (from, to);
+        const auto factor = m_self.geometricFactor (*from, *to);
         it = insert (it, std::make_pair (k, factor));
       }
 
@@ -143,8 +183,14 @@ public: /* Methods: */
   { }
 
   const Colour& operator () (Ray ray) {
-    run (ray);
-    return m_col;
+      if (BPT_ENABLED) {
+          runBPT (ray);
+      }
+      else {
+          run (ray);
+      }
+
+      return m_col;
   }
 
 private: /* Methods: */
@@ -171,8 +217,7 @@ private: /* Methods: */
     // If some recursion depth is exeeded terminate with some probability
     if (depth > RAY_MAX_REC_DEPTH) {
         if (pr <= rng ()) {
-            // DIFFUSE? need some other kind of ray event?
-            vertices.emplace_back (point, orientingN, m_scene.background (), prim, 0.0, DIFFUSE);
+            vertices.emplace_back (point, orientingN, Colour { 0.0, 0.0, 0.0 }, prim, 0.0, DIFFUSE);
             return;
         }
     }
@@ -195,8 +240,14 @@ private: /* Methods: */
     }   break;
     case REFRACT:
         assert (false && "No support for refraction in path tracer yet!");
+    case LIGHT:
+    case EYE:
         break;
     }
+  }
+
+  void runBPT (const Ray& ray) {
+      m_col = radiance (traceEye (ray), traceLight ());
   }
 
   // TODO: should we add the initial point as a vertex?
@@ -215,7 +266,7 @@ private: /* Methods: */
       const auto nLights = m_scene.lights ().size ();
       const floating lightPr = 1.0 / (floating) nLights;
       const auto light = m_scene.lights ()[nLights - 1];
-      const auto R = light->emit ();
+      const auto R = light->sample ();
 
       VertexList vertices;
       vertices.reserve (RAY_MAX_REC_DEPTH);
@@ -223,24 +274,186 @@ private: /* Methods: */
       return std::move (vertices);
   }
 
+  const Material& getMat (const Primitive* prim) const {
+      return m_scene.materials ()[prim->material ()];
+  }
+
   Colour radiance (const VertexList& eyeVertices, const VertexList& lightVertices) {
       const auto NE = eyeVertices.size ();
       const auto NL = lightVertices.size ();
 
-//      std::vector<Colour> alpha_L (NL + 1);
-//      alpha_L[0] = Colour { 1.0, 1.0, 1.0 };
-//      if (NL >= 1) {
-//          alpha_L[1] = Colour
-//      }
-      return Colour { 0.0, 0.0, 0.0 };
+      const auto PA_light = floating { 1.0 };
+      const auto PA_eye = floating { 1.0 };
+      const auto alpha_L = computeAlphaL (lightVertices);
+      const auto alpha_E = computeAlphaE (eyeVertices);
+
+      // One below equation 10.8
+      table<Colour> c = { NL + 1, NE + 1, { 0.0, 0.0, 0.0 } };
+      auto gcache = GeometricFactorCache { *this };
+
+      for (size_t t = 1; t <= NE; ++ t) {
+          switch (eyeVertices[t].m_event) {
+          case LIGHT:
+              // TODO: this is incorrect, we need to factor in emission
+              c(0, t) = eyeVertices[t].m_col;
+          default:
+              break;
+          }
+      }
+
+      for (size_t s = 1; s <= NL; ++ s) {
+          for (size_t t = 1; t <= NE; ++ t) {
+              Colour brdf0, brdf1;
+              const auto& lv = lightVertices[s - 1];
+              const auto& ev = eyeVertices[t - 1];
+              if (s == 1) {
+                  brdf0 = Colour { 1.0, 1.0, 1.0 } / M_PI;
+              }
+              else {
+                  brdf0 = brdf (getMat (lv.m_prim), lv.m_pos - lightVertices[s - 2].m_pos, ev.m_pos - lv.m_pos);
+              }
+
+              if (t == 1) {
+                  brdf1 = brdf (getMat (ev.m_prim), ev.m_pos - lv.m_pos, m_scene.camera ().eye () - ev.m_pos);
+              }
+              else {
+                  brdf1 = brdf (getMat (ev.m_prim), ev.m_pos - lv.m_pos, eyeVertices[t - 1].m_pos - ev.m_pos);
+              }
+
+              c(s, t) = gcache (&lv, &ev) * brdf0 * brdf1;
+          }
+      }
+
+      // Equation 10.9
+      table<double> w = { NL + 1, NE + 1, 0.0 };
+      for (size_t s = 0; s <= NL; ++ s) {
+          for (size_t t = 1; t <= NE; ++ t) {
+
+              // sum_{i}(p_i/p_s)
+              std::vector<floating> p (s + t + 1 , 0.0);
+              const size_t k = s + t - 1;
+
+              if (k == 0) {
+                  w (s, t) = 1.0;
+                  continue;
+              }
+
+              std::vector<const Vertex*> xs;
+              xs.reserve (NL + NE);
+              for (const auto& lv : lightVertices)
+                  xs.push_back (&lv);
+              for (const auto& ev : boost::adaptors::reverse (eyeVertices))
+                  xs.push_back (&ev);
+
+              p[s] = 1.0;
+              if (s == 0) {
+                  p[1] = p[0] * PA_light / generationPr (xs[1], xs[0]) * gcache (xs[1], xs[0]);
+
+                  for (size_t i = s + 1; i < k; ++ i) {
+                      const auto denom = gcache (xs[i + 1], xs[i]) * generationPr (xs[i + 1], xs[i]);
+                      p[i + 1] = p[i] * gcache (xs[i - 1], xs[i]) * generationPr (xs[i - 1], xs[i]) / denom;
+                      if (denom <= 0.0)
+                          p[i + 1] = 0.0;
+
+                  }
+
+                  if (k >= 1)
+                      p[k + 1] = p[k] * gcache (xs[k - 1], xs[k]) * generationPr (xs[k - 1], xs[k]) / PA_eye;
+              }
+              else {
+
+                  for (size_t i = s; i < k; ++ i) {
+                      const auto denom = gcache(xs[i + 1], xs[i]) * generationPr(xs[i + 1], xs[i]);
+                      p[i + 1] = p[i] * gcache(xs[i - 1], xs[i]) * generationPr(xs[i - 1], xs[i]) / denom;
+                      if (denom <= 0.0) {
+                          p[i + 1] = 0.0;
+                      }
+
+                      if (k >= 1)
+                          p[k + 1] = p[k] * gcache(xs[k - 1], xs[k]) * generationPr(xs[k - 1], xs[k]) / PA_eye;
+
+                      for (size_t i = s - 1; i > 0; -- i) {
+                          const auto denom = gcache(xs[i - 1], xs[i]) * generationPr(xs[i - 1], xs[i]);
+                          p[i] = p[i + 1] * gcache(xs[i + 1], xs[i]) * generationPr(xs[i + 1], xs[i]) / denom;
+                          if (denom <= 0.0) {
+                              p[i] = 0.0;
+                          }
+                      }
+
+                      if (s > 0)
+                          p[0] = p[1] * gcache(xs[1], xs[0]) * generationPr(xs[1], xs[0]) / PA_light;
+                  }
+              }
+
+              for (size_t i = 0; i <= k; ++ i) {
+                  switch (xs[i]->m_event) {
+                  case REFLECT:
+                  case REFRACT:
+                      p[i] = p[i + 1] = 0.0;
+                  default:
+                      break;
+                  }
+              }
+
+              floating sum = 0.0;
+              for (auto x : p) sum += x*x;
+              w (s, t) = 1.0 /sum;
+          }
+      }
+
+      // Equation below 10.9
+      auto result = Colour { 0.0, 0.0, 0.0 };
+      for (size_t s = 0; s <= NL; ++ s) {
+          for (size_t t = 1; t <= NE; ++ t) {
+              result += w(s, t) * alpha_L[s] * c(s, t) * alpha_E[t];
+          }
+      }
+
+      return result;
+  }
+
+  // Equation 10.6
+  std::vector<Colour> computeAlphaL (const VertexList& lightVertices) const {
+      const auto NL = lightVertices.size ();
+      const auto PA_light = floating { 1.0 };
+      auto alpha_L = std::vector<Colour>(NL + 1);
+
+      alpha_L[0] = Colour { 1.0, 1.0, 1.0 };
+
+      if (NL >= 1)
+          alpha_L[1] = (M_PI*getMat (lightVertices[0].m_prim).colour ()*emission) / PA_light;
+
+      for (size_t i = 2; i <= NL; ++ i)
+          alpha_L[i] = (lightVertices[i - 2].m_col / lightVertices[i - 1].m_pr) * alpha_L[i - 1];
+
+      return std::move (alpha_L);
+  }
+
+  // Equation 10.7
+  std::vector<Colour> computeAlphaE (const VertexList& eyeVertices) const {
+      const auto NE = eyeVertices.size ();
+      const auto PA_eye = floating { 1.0 };
+      auto alpha_E = std::vector<Colour>(NE+ 1);
+
+      alpha_E[0] = Colour { 1.0, 1.0, 1.0 };
+
+      if (NE >= 1)
+          alpha_E[1] = Colour {1.0, 1.0, 1.0} / PA_eye;
+
+      for (size_t i = 2; i <= NE; ++ i)
+          alpha_E[i] = (eyeVertices[i - 2].m_col / eyeVertices[i - 1].m_pr) * alpha_E[i - 1];
+
+      return std::move (alpha_E);
   }
 
   /**********************
    * Simple ray tracer. *
    **********************/
 
-  floating getShade(const PointLight& l, Point point, Vector& L) {
-    const Point p = l.center();
+  // TODO: giant hack, we just sample a single point on the light source
+  // and if the point isnt visible we are completely in shadow.
+  floating getShade(const Light* l, Point point, Vector& L) {
+    const Point p = l->sample ().origin ();
     const Ray ray = shootRay(point, p);
     L = normalised(p - point);
     const Intersection intr = intersectWithPrims(ray);
@@ -284,17 +497,7 @@ private: /* Methods: */
 
     for (const Light* l : m_scene.lights()) {
       Vector L;
-      floating shade = 0;
-
-      switch (l->type()) {
-        case POINT_LIGHT:
-          shade = getShade(*static_cast<const PointLight*>(l), point, L);
-          break;
-        default:
-          assert (false && "Unsupported light type!");
-          break;
-      }
-
+      floating shade = getShade(l, point, L);
       if (almost_zero(shade)) {
         continue;
       }

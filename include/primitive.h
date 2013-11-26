@@ -10,8 +10,9 @@ class Ray;
 class Primitive {
 public: /* Methods: */
 
-  Primitive ()
+  explicit Primitive (bool is_light = false)
     : m_material (0)
+    , m_is_light (is_light)
   { }
 
   virtual ~Primitive() { }
@@ -36,8 +37,7 @@ public: /* Methods: */
   /// Least coordinate of the primitive on @a axis
   virtual floating getLeftExtreme(Axes axis) const = 0;
 
-  ///
-  virtual bool is_light() const { return false; }
+  bool is_light() const { return m_is_light; }
 
   /// Greates coordinate of the primitive on @a axis
   virtual floating getRightExtreme(Axes axis) const = 0;
@@ -49,6 +49,7 @@ public: /* Methods: */
 
 private: /* Fields: */
   material_index_t m_material; ///< Material description of the primitive
+  const bool       m_is_light; ///< If the given primitive is emitting light.
 };
 
 #endif

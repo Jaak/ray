@@ -6,23 +6,23 @@
 #include "random.h"
 #include "sphere.h"
 
+/**
+ * TODO: figure out why setting the radius to epsilon or
+ * zero causes massive rendering errors.
+ */
+
 /// Point light source.
 class PointLight : public Sphere, public Light {
 public: /* Methods: */
 
-  PointLight(const Point& p, const Colour& c) : Sphere(p, epsilon), Light(c) {}
+  PointLight(const Point& p, const Colour& c) : Sphere(p, 0.01, true), Light(c) {}
 
-  PointLight(const Point& p) : Sphere(p, epsilon), Light(Colour(1, 1, 1)) {}
+  PointLight(const Point& p) : Sphere(p, 0.01, true), Light(Colour(1, 1, 1)) {}
 
-  LightType type(void) const { return POINT_LIGHT; }
+  const Primitive* prim () const { return this; }
 
-  bool is_light(void) const { return true; }
-
-  Ray emit() const {
-    const Vector u = { rng() - 0.5, rng() - 0.5, rng() - 0.5 };
-    const Vector v = normalised(u);
-    const Point p = center() + 2.0 * ray_epsilon * v;
-    return { p, v };
+  Ray sample() const {
+    return { center(), rngSphere ()};
   }
 };
 

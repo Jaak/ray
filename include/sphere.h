@@ -6,6 +6,7 @@
 #include "intersection.h"
 #include "primitive.h"
 #include "ray.h"
+#include "light.h"
 
 #include <iostream>
 
@@ -16,8 +17,9 @@
 class Sphere : public Primitive {
 public: /* Methods: */
 
-  Sphere(const Point& c, floating r)
-    : m_center(c)
+  Sphere(const Point& c, floating r, bool is_light = false)
+    : Primitive (is_light)
+    , m_center(c)
     , m_radius(r)
     , m_sqrradius(r*r)
   { }
@@ -25,7 +27,9 @@ public: /* Methods: */
   const Point& center() const { return m_center; }
   floating radius() const { return m_radius; }
 
-  Vector normal(const Point& p) const { return normalised(p - m_center); }
+  Vector normal(const Point& p) const {
+      return normalised(p - m_center);
+  }
 
   void intersect(const Ray& ray, Intersection& intr) {
     const Vector tmp = ray.origin() - m_center;

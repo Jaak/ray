@@ -25,7 +25,11 @@ public: /* Methods: */
     return m_point + 0.5*m_u + 0.5*m_v;
   }
 
-  Ray emit() const {
+  const Primitive* prim () const {
+      return this;
+  }
+
+  Ray sample() const {
     const floating h = rng();
     const floating k = rng();
     const Point P = m_point + h * m_u + k * m_v;

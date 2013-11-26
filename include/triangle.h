@@ -40,6 +40,7 @@ public: /* Methods: */
       return;
     }
 
+    // TODO: side of the intersection matters!
     intr.update(ray, this, a, Intersection::Type::EXTERNAL);
   }
 

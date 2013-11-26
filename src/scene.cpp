@@ -128,7 +128,19 @@ public: /* Methods: */
     for (auto& surface : scene.surfaces()) {
       for (int h = m_y0; h < m_y1; ++h) {
         for (int w = m_x0; w < m_x1; ++w) {
-          surface->setPixel(h, w, Raytracer(scene)(scene.m_camera.spawnRay(h, w)));
+          if (BPT_ENABLED) {
+            auto col = Colour { 0.0, 0.0, 0.0 };
+              for (size_t sample = 0; sample < BPT_SAMPLES; ++ sample) {
+                const floating dh = rng () - 0.5;
+                const floating dw = rng () - 0.5;
+                const auto c = Raytracer(scene)(scene.m_camera.spawnRay(h + dh, w + dw));
+                col += (c - col) / (floating) (sample + 1);
+                surface->setPixel(h, w, col);
+              }
+            }
+          else {
+            surface->setPixel(h, w, Raytracer(scene)(scene.m_camera.spawnRay(h, w)));
+          }
         }
       }
     }

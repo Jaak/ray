@@ -1,7 +1,10 @@
 #ifndef RAY_LIGHT_H
 #define RAY_LIGHT_H
 
-#include "primitive.h"
+#include "geometry.h"
+
+class Primitive;
+class Ray;
 
 enum LightType {
   AREA_LIGHT,
@@ -11,11 +14,18 @@ enum LightType {
 class Light {
 public: /* Methods: */
   Light(Colour const& c) : m_colour(c) {}
-  ~Light() {}
+  virtual ~Light() {}
 
-  Colour const& colour(void) const { return m_colour; }
-  virtual LightType type(void) const = 0;
-  virtual Ray emit() const = 0;
+  const Colour& colour(void) const { return m_colour; }
+
+  /// Every light source must act as a part of the geometry.
+  virtual const Primitive* prim () const = 0;
+
+  /**
+   * \brief Essentially sample a photon from the light source.
+   * TODO: also return probability?
+   */
+  virtual Ray sample() const = 0;
 
 private: /* Fields: */
   Colour m_colour; ///< Colour of the light

@@ -201,6 +201,10 @@ inline Colour operator*(const Colour& c1, const Colour& c2) {
   return { c1.r * c2.r, c1.g * c2.g, c1.b * c2.b };
 }
 
+inline Colour operator*(const Colour& c1, floating s) {
+  return { c1.r * s, c1.g * s, c1.b * s };
+}
+
 inline Colour operator/(const Colour& c1, floating s) {
   return { c1.r / s, c1.g / s, c1.b / s };
 }

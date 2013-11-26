@@ -31,9 +31,14 @@ inline floating clamp (floating x, floating mn = 0.0, floating mx = 1.0) {
 }
 
 /**
+ * If bidirectional path tracing should be enabled.
+ */
+constexpr bool BPT_ENABLED = false;
+
+/**
  * How many samples per pixel to take.
  */
-constexpr std::size_t SAMPLES = 25;
+constexpr std::size_t BPT_SAMPLES = 25;
 
 /**
  * This constant is used to determin if subpixel block has to be subdivided.
@@ -65,7 +70,7 @@ constexpr std::size_t AA_MAX_DEPTH = 2;
  * number of bounces, the recursion is also cut when rays contribution
  * to pixels colour becomes trivially small.
  */
-constexpr std::size_t RAY_MAX_REC_DEPTH = 16;
+constexpr std::size_t RAY_MAX_REC_DEPTH = 5;
 
 /**
  * If rays contribution to pixels colour becomes less than

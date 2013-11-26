@@ -91,6 +91,7 @@ public: /* Methods: */
     if (m_u < 0 || m_v < 0 || m_u + m_v > 1)
       return;
 
+    // TODO: side of the intersection matters
     intr.update (ray, this, t, Intersection::Type::EXTERNAL);
   }
 

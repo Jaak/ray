@@ -17,6 +17,7 @@ public:                 /* Methods: */
 
   int height() const { return m_height; }
   int width() const { return m_width; }
+  const Point& eye () const { return m_eye; }
 
   void setDimensions(int h, int w) { m_height = h; m_width = w; }
   void setHither(floating h) { m_hither = h; }
