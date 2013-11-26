@@ -9,20 +9,20 @@ typedef double floating;
 /**
  * TODO: this should be machine epsilon.
  */
-constexpr floating epsilon = 1e-5; // std::numeric_limits<floating>::epsilon ();
+constexpr floating epsilon = 1e-6; // std::numeric_limits<floating>::epsilon ();
 
 /**
  * How much do we need to pump the new ray away from the intersection (in the
  * direction of the normal) to avoid invalid self-intersections.
  */
-constexpr floating ray_epsilon = 1e-5;
+constexpr floating ray_epsilon = 1e-6;
 
 inline bool almost_equal(floating x, floating y, int ulp = 1) {
-  return fabs(x - y) <= epsilon * fmax(fabs(x), fabs(y)) * ulp;
+  return fabs(x - y) < epsilon * fmax(fabs(x), fabs(y)) * ulp;
 }
 
 inline bool almost_zero(floating x, int ulp = 1) {
-  return fabs(x) <= epsilon * fabs(x) * ulp;
+  return fabs(x) < epsilon * fabs(x) * ulp;
 }
 
 inline floating clamp (floating x, floating mn = 0.0, floating mx = 1.0) {
