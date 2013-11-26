@@ -10,6 +10,8 @@
 #include "ray.h"
 #include "scene.h"
 
+#include <map>
+
 enum EventType {
     DIFFUSE,
     REFLECT,
@@ -94,23 +96,44 @@ private: /* Methods: */
   }
 
 
-  floating geometryTerm (const Vertex& from, const Vertex& to) {
-      const auto sqLen = (to.m_pos - from.m_pos).sqrlength ();
-      const auto from2to = normalised (from.m_pos - to.m_pos);
-      const auto to2from = normalised (to.m_pos - from.m_pos);
-      const auto testRay = Ray { from.m_pos.nudgePoint (from2to), from2to };
-      const auto intr = intersectWithPrims (testRay);
-      const auto c0 = from.m_normal.dot(from2to);
-      const auto c1 = to.m_normal.dot(to2from);
+  // Function G defined in Definition 8.3 in Veach's thesis
+  floating geometricFactor(const Vertex& from, const Vertex& to) const {
+    const auto sqLen = (to.m_pos - from.m_pos).sqrlength();
+    const auto from2to = normalised(from.m_pos - to.m_pos);
+    const auto to2from = normalised(to.m_pos - from.m_pos);
+    const auto testRay = Ray{ from.m_pos.nudgePoint(from2to), from2to };
+    const auto intr = intersectWithPrims(testRay);
+    const auto cosT0 = from.m_normal.dot(from2to);
+    const auto cosT1 = to.m_normal.dot(to2from);
 
-      if (c0 >= 0.0 && c1 >= 0.0 && fabs (intr.dist () - sqrt(sqLen)) < epsilon) {
-          return c0 * c1 / sqLen;
-      }
-      else {
-           return 0.0;
-      }
+    if (fabs(intr.dist() - sqrt(sqLen)) < epsilon) {
+      return fabs(cosT0 * cosT1) / sqLen;
+    } else {
+      return 0.0;
+    }
   }
 
+  struct GeometricFactorCache : std::map<std::pair<const Vertex*, const Vertex*>, floating> {
+  public: /* Methods: */
+    
+    explicit GeometricFactorCache (const Raytracer& self)
+      : m_self (self)
+    { }
+
+    floating operator () (const Vertex& from, const Vertex& to) {
+      const auto k = std::make_pair (&from, &to);
+      auto it = find (k);
+      if (it == end ()) {
+        const auto factor = m_self.geometricFactor (from, to);
+        it = insert (it, std::make_pair (k, factor));
+      }
+
+      return it->second;
+    }
+
+  private: /* Fields: */
+    const Raytracer& m_self;
+  };
 
 public: /* Methods: */
 
