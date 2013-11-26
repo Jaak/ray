@@ -69,10 +69,16 @@ public: /* Methods: */
     cnv = -c[u] * reci;
   }
 
-  Vector normal(const Point&) const {
-    return normalised(m_verts[0].m_normal +
-                      m_u * (m_verts[1].m_normal - m_verts[0].m_normal) +
-                      m_v * (m_verts[2].m_normal - m_verts[0].m_normal));
+  Vector normal(const Point& pos) const {
+      const Point A = m_verts[0].m_pos;
+      const int ku = (k + 1) % 3, kv = (k + 2) % 3;
+      const floating hu = pos[ku] - A[ku];
+      const floating hv = pos[kv] - A[kv];
+      const auto u = hv * bnu + hu * bnv;
+      const auto v = hu * cnu + hv * cnv;
+      return normalised(m_verts[0].m_normal +
+              u * (m_verts[1].m_normal - m_verts[0].m_normal) +
+              v * (m_verts[2].m_normal - m_verts[0].m_normal));
   }
 
   void intersect (const Ray& ray, Intersection& intr) {
@@ -85,10 +91,10 @@ public: /* Methods: */
     const floating hu = O[ku] + t * D[ku] - A[ku];
     const floating hv = O[kv] + t * D[kv] - A[kv];
 
-    m_u = hv * bnu + hu * bnv;
-    m_v = hu * cnu + hv * cnv;
+    const auto u = hv * bnu + hu * bnv;
+    const auto v = hu * cnu + hv * cnv;
 
-    if (m_u < 0 || m_v < 0 || m_u + m_v > 1)
+    if (u < 0 || v < 0 || u + v > 1)
       return;
 
     // TODO: side of the intersection matters
@@ -107,8 +113,6 @@ public: /* Methods: */
 
 private: /* Fields: */
   Vertex m_verts[3];
-
-  floating m_u, m_v;
   floating nu, nv, nd;
   floating bnu, bnv;
   floating cnu, cnv;
