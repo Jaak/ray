@@ -4,7 +4,7 @@
 
 void Intersection::update(const Ray& ray, const Primitive* prim, floating dist,
                           Intersection::Type type) {
-  if (dist > epsilon && (!hasIntersections() || dist < this->dist())) {
+  if (dist > 0.0 && (!hasIntersections() || dist < this->dist())) {
     setPrimitive(prim);
     setDist(dist);
     setPoint(ray.origin() + dist * ray.dir());
