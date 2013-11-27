@@ -25,6 +25,19 @@ show_error(const char* s) {
 	fprintf(stderr, "%s\n", s);
 }
 
+bool is_whitespace (int c) {
+    switch (c) {
+    case ' ':
+    case '\t':
+    case '\n':
+    case '\f':
+    case '\r':
+        return true;
+    }
+
+    return false;
+}
+
 void do_comment(FILE* fp) {
   char* cp;
   char comment[256];
@@ -88,35 +101,41 @@ fmterr:
 }
 
 void do_light(Scene& scene, FILE* fp) {
-  float x, y, z;
-  if (fscanf(fp, "%f %f %f", &x, &y, &z) != 3) {
+  float x, y, z, r = 1.0, g = 1.0, b = 1.0;
+  const auto n = fscanf(fp, "%f %f %f %f %f %f", &x, &y, &z, &r, &g, &b);
+  if (n != 3 && n != 6) {
     show_error("Light source syntax error");
     exit(1);
   }
 
-  PointLight* light = new PointLight(Point(x, y, z), Colour(1, 1, 1));
-
+  auto light = new PointLight(Point(x, y, z), Colour(r, g, b));
   scene.addLight(light);
-  scene.addPrimitive(light);
 }
 
+// TODO: more area lights
 void do_area_light(Scene& scene, FILE* fp) {
-  float x, y, z;
-  float ux, uy, uz;
-  float vx, vy, vz;
-
-  if (fscanf(fp, "%f %f %f %f %f %f %f %f %f", &x, &y, &z, &ux, &uy, &uz, &vx,
-             &vy, &vz) !=
-      9) {
-    show_error("Light source syntax error");
-    exit(1);
+  int c;
+  while ((c = getc (fp)) != EOF ) {
+      if (! is_whitespace (c))
+          break;
   }
 
-  AreaLight* light = new AreaLight(
-      Rectangle(Point(x, y, z), Vector(ux, uy, uz), Vector(vx, vy, vz)),
-      Colour(1, 1, 1));
-  scene.addLight(light);
-  scene.addPrimitive(light);
+  // Sphere area light
+  if (c == 's') {
+      float R, x, y, z, r = 1.0, g = 1.0, b = 1.0;
+      const auto n = fscanf(fp, "%f %f %f %f %f %f %f", &R, &x, &y, &z, &r, &g, &b);
+      if (n != 4 && n != 7) {
+          show_error ("Spherical area light source syntax error");
+          exit (1);
+      }
+
+      auto light = new SphereLight { Point { x, y, z}, R, Colour { r, g, b } };
+      scene.addLight (light);
+  }
+  else {
+      show_error ("Area light syntax error");
+      exit (1);
+  }
 }
 
 void do_background(Scene& scene, FILE* fp) {
@@ -130,10 +149,7 @@ void do_background(Scene& scene, FILE* fp) {
 }
 
 void do_fill(Scene& scene, FILE* fp) {
-  float r, g, b, ka, kd, pd, ks, ps, ks_spec, phong_pow, ang, t, ior;
-
-  pd = 0.0;
-  ps = 0.0;
+  float r, g, b, ka, kd, ks, ks_spec, phong_pow, ang, t, ior;
 
   if (fscanf(fp, "%f %f %f", &r, &g, &b) != 3) {
     show_error("fill color syntax error");
@@ -155,7 +171,7 @@ void do_fill(Scene& scene, FILE* fp) {
   ang = (float)((180.0 / M_PI) * acos(exp(log(0.5) / phong_pow)));
 
   current_material = scene.materials().registerMaterial(
-      Material(Colour(r, g, b), kd, pd, ks, ps, t, ior, phong_pow));
+      Material(Colour(r, g, b), kd, ks, t, ior, phong_pow));
 }
 
 // TODO: support for cones
@@ -287,7 +303,7 @@ parse_nff(Scene& scene, FILE* fp)
       case '#': do_comment(fp); break;
       case 'v': do_view(scene, fp); break;
       case 'l': do_light(scene, fp); break;
-      case 'a': do_area_light(scene, fp); break;
+      case 'L': do_area_light (scene, fp); break;
       case 'b': do_background(scene, fp); break;
       case 'f': do_fill(scene, fp); break;
       case 'c': do_cone(scene, fp); break;

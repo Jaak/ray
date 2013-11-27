@@ -24,7 +24,7 @@ public: /* Methods: */
   virtual ~PrimitiveManager() {}
 
   /// Add a primitive to primitive manager.
-  virtual void addPrimitive(Primitive* prim) = 0;
+  virtual void addPrimitive(const Primitive* prim) = 0;
 
   /**
    * Initialises the primitive manager.

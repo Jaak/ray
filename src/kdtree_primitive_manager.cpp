@@ -7,7 +7,7 @@
 #include <algorithm>
 #include <cassert>
 
-typedef Primitive* PrimPtr;
+typedef const Primitive* PrimPtr;
 
 /**
  * %Node of the tree.
@@ -51,7 +51,7 @@ struct Node {
     Node *out = new (memptr) Node();
 
     size_t i = 0;
-    for (Primitive *prim : prims) {
+    for (auto prim : prims) {
       out->m_prims[i++] = prim;
     }
 
@@ -92,12 +92,14 @@ KdTreePrimitiveManager::KdTreePrimitiveManager()
 { }
 
 KdTreePrimitiveManager::~KdTreePrimitiveManager() {
-  for (Primitive* prim : m_prims) {
-    delete prim;
-  }
+    for (auto prim : m_prims) {
+        if (!prim->is_light ()) {
+            delete prim;
+        }
+    }
 
-  std::cout << "Intersections : " << icount << std::endl;
-  Node::release (m_root);
+    std::cout << "Intersections : " << icount << std::endl;
+    Node::release (m_root);
 }
 
 bool intersectAabb(const Aabb& box, const Ray& ray, floating& a, floating& b) {
@@ -181,7 +183,7 @@ floating getOptimalSplitPosition(const PrimList& plist, Aabb const& box, Axes& a
 
   for (Axes i = Axes::X; i != Axes::None; ++i) {
     j = 0;
-    for (Primitive* prim : plist) {
+    for (auto prim : plist) {
       splts[j].pos = prim->getLeftExtreme(i);
       splts[j++].side = LEFT;
       splts[j].pos = prim->getRightExtreme(i);
@@ -231,7 +233,7 @@ Node *buildKDTree(const PrimList &prims, const Aabb &box, int depth = 0) {
     return Node::make(prims);
 
   PrimList lefts, rights;
-  for (Primitive *p : prims) {
+  for (auto p : prims) {
     if (p->getLeftExtreme(axis) < split) {
       lefts.push_back(p);
     }
@@ -258,7 +260,7 @@ void KdTreePrimitiveManager::init() {
     m_bbox.m_p2[i] = m_prims.front()->getRightExtreme(i);
   }
 
-  for (Primitive *prim : m_prims) {
+  for (auto prim : m_prims) {
     for (Axes i = Axes::X; i != Axes::None; ++i) {
       const floating l = prim->getLeftExtreme(i);
       const floating r = prim->getRightExtreme(i);
@@ -272,7 +274,7 @@ void KdTreePrimitiveManager::init() {
             << std::endl;
 }
 
-void KdTreePrimitiveManager::addPrimitive(Primitive *p) {
+void KdTreePrimitiveManager::addPrimitive(const Primitive *p) {
   assert(p != nullptr);
   m_prims.push_back(p);
 }
@@ -347,7 +349,7 @@ Intersection KdTreePrimitiveManager::intersectWithPrims(const Ray& ray) const {
     {
       Intersection intr;
       for (PrimPtr* ptr = cur->prims (); *ptr; ++ ptr, ++ icount) {
-        Primitive* prim = *ptr;
+        auto prim = *ptr;
         prim->intersect(ray, intr);
         if (intr.hasIntersections()) {
           if (intr.dist() < stack[en].t - epsilon ||

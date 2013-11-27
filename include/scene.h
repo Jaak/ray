@@ -5,6 +5,7 @@
 #include "camera.h"
 #include "geometry.h"
 #include "surface.h"
+#include "material.h"
 #include "materials.h"
 
 #include <vector>
@@ -52,7 +53,7 @@ public: /* Methods: */
 
   void setSceneReader(SceneReader* sr);
 
-  void addPrimitive (Primitive* prim);
+  void addPrimitive (const Primitive* prim);
   void addLight (const Light*  light);
   const std::vector<const Light* >& lights() const;
   void attachSurface(Surface* surface) { m_surfaces.emplace_back(surface); }
@@ -62,8 +63,8 @@ public: /* Methods: */
   Materials& materials () { return m_materials; }
   Camera& camera() { return m_camera; }
   const Camera& camera() const { return m_camera; }
-  void setBackground(const Colour& c) { m_background = c; }
-  const Colour& background() const { return m_background; }
+  void setBackground(const Colour& c);
+  const Material& background() const;
   friend std::ostream& operator << (std::ostream&, Scene const&);
 
 private:
@@ -75,7 +76,7 @@ protected: /* Fields: */
   std::unique_ptr<PrimitiveManager>     m_manager;       ///< Primitive manager of the scene.
   std::unique_ptr<SceneReader>          m_scene_reader;  ///< Way to read scene from a source.
   std::vector<const Light* >            m_lights;        ///< Lights of the scene.
-  Colour                                m_background;    ///< Background colour of the scene.
+  material_index_t                      m_background;    ///< Background material.
   std::vector<std::unique_ptr<Surface>> m_surfaces;      ///< Output surfaces.
 };
 

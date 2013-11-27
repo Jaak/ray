@@ -11,7 +11,11 @@
  * zero causes massive rendering errors.
  */
 
-/// Point light source.
+/**
+ * Point lights are just SphereLight's with really small radius.
+ * We are not reusing SphereLight-s class as we can provide more efficient
+ * and accurate implementation for sampling.
+ */
 class PointLight : public Sphere, public Light {
 public: /* Methods: */
 
@@ -21,9 +25,32 @@ public: /* Methods: */
 
   const Primitive* prim () const { return this; }
 
-  Ray sample() const {
+  Ray sample () const {
     return { center(), rngSphere ()};
   }
+};
+
+/**
+ * Spherical light does not emit directed light.
+ * Light rays are sampled as follows:
+ * 1) pick random point on the surface of the light source
+ * 2) pick random direction on hemisphere pointing away from the picked point
+ */
+class SphereLight : public Sphere, public Light {
+public: /* Methods: */
+
+    SphereLight(const Point& p, floating r, const Colour& c) : Sphere(p, r, true), Light(c) {}
+
+    SphereLight(const Point& p, floating r) : Sphere(p, r, true), Light(Colour(1, 1, 1)) {}
+
+    const Primitive* prim () const { return this; }
+
+    Ray sample () const {
+        const auto normal = rngSphere ();
+        const auto point = center () + radius ()*normal;
+        const auto dir = rngHemisphereVector (normal);
+        return { point.nudgePoint (normal), dir };
+    }
 };
 
 #endif

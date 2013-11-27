@@ -81,7 +81,7 @@ public: /* Methods: */
               v * (m_verts[2].m_normal - m_verts[0].m_normal));
   }
 
-  void intersect (const Ray& ray, Intersection& intr) {
+  void intersect (const Ray& ray, Intersection& intr) const {
     const Point O = ray.origin();
     const Point A = m_verts[0].m_pos;
     const Vector D = ray.dir();

@@ -7,7 +7,7 @@
 
 #include <vector>
 
-typedef std::vector<Primitive*> PrimList;
+typedef std::vector<const Primitive*> PrimList;
 
 struct Node;
 class Ray;
@@ -17,7 +17,7 @@ public: /* Methods: */
   KdTreePrimitiveManager();
   ~KdTreePrimitiveManager();
   virtual void init();
-  virtual void addPrimitive(Primitive* p);
+  virtual void addPrimitive(const Primitive* p);
   virtual Intersection intersectWithPrims(const Ray& ray) const;
 
 private:            /* Fields: */

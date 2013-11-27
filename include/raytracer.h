@@ -21,7 +21,7 @@ enum EventType {
     EYE
 };
 
-constexpr floating emission = 100.0;
+constexpr floating emission = 1000000.0;
 
 // TODO: i think that our material representation is all wrong...
 
@@ -93,6 +93,8 @@ using VertexList = std::vector<Vertex>;
 floating generationPr (const Vertex* from, const Vertex* to) {
     assert (from != nullptr && to != nullptr);
     switch (from->m_event) {
+    case LIGHT:
+        return 1.0 / M_PI; // ??
     case DIFFUSE: {
         const auto dir = normalised (to->m_pos - from->m_pos);
         const auto cosT = from->m_normal.dot (dir);
@@ -101,14 +103,13 @@ floating generationPr (const Vertex* from, const Vertex* to) {
     case REFLECT:
     case REFRACT:
         return 1.0;
-    case LIGHT:
     case EYE:
-        return 0.0; // ??
+        return 1.0; // ??
     }
 }
 
 // TODO: proper brdf, this thing is a huge hack
-Colour brdf (const Material& m, const Vector& in, const Vector& out) {
+Colour brdf (const Material& m, const Vector&, const Vector&) {
     return m.colour () * (diffusePr (m) / M_PI + reflectPr (m) + refractPr (m));
 }
 
@@ -118,8 +119,8 @@ Colour brdf (const Material& m, const Vector& in, const Vector& out) {
 class Raytracer {
 private: /* Methods: */
 
-  Raytracer& operator = (const Raytracer&); // Not assignable.
-  Raytracer(const Raytracer&); // Not copyable.
+  Raytracer& operator = (const Raytracer&) = delete;
+  Raytracer(const Raytracer&) = delete;
 
   Intersection intersectWithPrims(const Ray& ray) const {
     return m_scene.manager().intersectWithPrims(ray);
@@ -138,14 +139,14 @@ private: /* Methods: */
   // Function G defined in Definition 8.3 in Veach's thesis
   floating geometricFactor(const Vertex& from, const Vertex& to) const {
     const auto sqLen = (to.m_pos - from.m_pos).sqrlength();
-    const auto from2to = normalised(from.m_pos - to.m_pos);
     const auto to2from = normalised(to.m_pos - from.m_pos);
-    const auto testRay = Ray{ from.m_pos.nudgePoint(from2to), from2to };
+    const auto from2to = - to2from;
+    const auto testRay = Ray{ from.m_pos.nudgePoint(to2from), to2from};
     const auto intr = intersectWithPrims(testRay);
-    const auto cosT0 = from.m_normal.dot(from2to);
-    const auto cosT1 = to.m_normal.dot(to2from);
+    const auto cosT0 = from.m_normal.dot(to2from);
+    const auto cosT1 = to.m_normal.dot(from2to);
 
-    if (fabs(intr.dist() - sqrt(sqLen)) < epsilon) {
+    if (intr.hasIntersections () && almost_equal (intr.dist(), sqrt(sqLen))) {
       return fabs(cosT0 * cosT1) / sqLen;
     } else {
       return 0.0;
@@ -177,12 +178,13 @@ private: /* Methods: */
 
 public: /* Methods: */
 
-  Raytracer(Scene& s)
+  explicit Raytracer(Scene& s)
     : m_scene(s)
     , m_col(0, 0, 0)
   { }
 
   const Colour& operator () (Ray ray) {
+      m_col = Colour { 0.0, 0.0, 0.0 };
       if (BPT_ENABLED) {
           runBPT (ray);
       }
@@ -201,8 +203,10 @@ private: /* Methods: */
 
   void trace (const Ray& ray, size_t depth, floating iior, VertexList& vertices) {
     const auto intr = intersectWithPrims (ray);
-    if (! intr.hasIntersections ())
-      return;
+
+    if (! intr.hasIntersections ()) {
+        return;
+    }
 
     const auto prim = intr.getPrimitive ();
     const auto m = m_scene.materials ()[prim->material()];
@@ -226,22 +230,27 @@ private: /* Methods: */
     }
 
     switch (getEventType (m)) {
+    case LIGHT:
+        vertices.emplace_back (point, orientingN, objCol / M_PI, prim, pr / M_PI, LIGHT);
+        return;
     case DIFFUSE: {
         const auto dir = rngHemisphereVector (orientingN);
         const auto R = Ray { point.nudgePoint (dir), dir };
         vertices.emplace_back (point, orientingN, objCol / M_PI, prim, pr / M_PI, DIFFUSE);
         trace (R, depth + 1, iior, vertices);
+        return;
     }   break;
+    case REFRACT:
     case REFLECT: {
         const auto dir = reflect (V, N);
         const auto R = Ray { point.nudgePoint (dir), dir };
         vertices.emplace_back (point, orientingN, objCol, prim, pr, REFLECT);
         trace (R, depth + 1, iior, vertices);
+        return;
     }   break;
-    case REFRACT:
-        assert (false && "No support for refraction in path tracer yet!");
-    case LIGHT:
     case EYE:
+        assert (false && "No support for refraction in path tracer yet!");
+        abort ();
         break;
     }
   }
@@ -267,14 +276,23 @@ private: /* Methods: */
       const floating lightPr = 1.0 / (floating) nLights;
       const auto light = m_scene.lights ()[nLights - 1];
       const auto R = light->sample ();
+      const auto N = light->prim()->normal(R.origin ());
+
 
       VertexList vertices;
       vertices.reserve (RAY_MAX_REC_DEPTH);
+      vertices.emplace_back (
+        R.origin(), N, light->colour(), light->prim(),
+        1.0 / (2.0 * M_PI * fmax (0.0, N.dot (R.dir ()))),
+        LIGHT
+      );
       trace (R, 1, lightPr, vertices);
       return std::move (vertices);
   }
 
   const Material& getMat (const Primitive* prim) const {
+      if (prim == nullptr)
+          return m_scene.background ();
       return m_scene.materials ()[prim->material ()];
   }
 
@@ -292,12 +310,9 @@ private: /* Methods: */
       auto gcache = GeometricFactorCache { *this };
 
       for (size_t t = 1; t <= NE; ++ t) {
-          switch (eyeVertices[t].m_event) {
-          case LIGHT:
-              // TODO: this is incorrect, we need to factor in emission
-              c(0, t) = eyeVertices[t].m_col;
-          default:
-              break;
+          const auto prim = eyeVertices[t - 1].m_prim;
+          if (prim && prim->is_light ()) {
+              c(0, t) = eyeVertices[t - 1].m_col*emission;
           }
       }
 
@@ -317,7 +332,7 @@ private: /* Methods: */
                   brdf1 = brdf (getMat (ev.m_prim), ev.m_pos - lv.m_pos, m_scene.camera ().eye () - ev.m_pos);
               }
               else {
-                  brdf1 = brdf (getMat (ev.m_prim), ev.m_pos - lv.m_pos, eyeVertices[t - 1].m_pos - ev.m_pos);
+                  brdf1 = brdf (getMat (ev.m_prim), ev.m_pos - lv.m_pos, eyeVertices[t - 2].m_pos - ev.m_pos);
               }
 
               c(s, t) = gcache (&lv, &ev) * brdf0 * brdf1;
@@ -348,7 +363,6 @@ private: /* Methods: */
               p[s] = 1.0;
               if (s == 0) {
                   p[1] = p[0] * PA_light / generationPr (xs[1], xs[0]) * gcache (xs[1], xs[0]);
-
                   for (size_t i = s + 1; i < k; ++ i) {
                       const auto denom = gcache (xs[i + 1], xs[i]) * generationPr (xs[i + 1], xs[i]);
                       p[i + 1] = p[i] * gcache (xs[i - 1], xs[i]) * generationPr (xs[i - 1], xs[i]) / denom;
@@ -368,21 +382,20 @@ private: /* Methods: */
                       if (denom <= 0.0) {
                           p[i + 1] = 0.0;
                       }
-
-                      if (k >= 1)
-                          p[k + 1] = p[k] * gcache(xs[k - 1], xs[k]) * generationPr(xs[k - 1], xs[k]) / PA_eye;
-
-                      for (size_t i = s - 1; i > 0; -- i) {
-                          const auto denom = gcache(xs[i - 1], xs[i]) * generationPr(xs[i - 1], xs[i]);
-                          p[i] = p[i + 1] * gcache(xs[i + 1], xs[i]) * generationPr(xs[i + 1], xs[i]) / denom;
-                          if (denom <= 0.0) {
-                              p[i] = 0.0;
-                          }
-                      }
-
-                      if (s > 0)
-                          p[0] = p[1] * gcache(xs[1], xs[0]) * generationPr(xs[1], xs[0]) / PA_light;
                   }
+
+                  if (k >= 1)
+                      p[k + 1] = p[k] * gcache(xs[k - 1], xs[k]) * generationPr(xs[k - 1], xs[k]) / PA_eye;
+
+                  for (size_t i = s - 1; i > 0; -- i) {
+                      const auto denom = gcache(xs[i - 1], xs[i]) * generationPr(xs[i - 1], xs[i]);
+                      p[i] = p[i + 1] * gcache(xs[i + 1], xs[i]) * generationPr(xs[i + 1], xs[i]) / denom;
+                      if (denom <= 0.0) {
+                          p[i] = 0.0;
+                      }
+                  }
+
+                  p[0] = p[1] * gcache(xs[1], xs[0]) * generationPr(xs[1], xs[0]) / PA_light;
               }
 
               for (size_t i = 0; i <= k; ++ i) {
@@ -397,7 +410,7 @@ private: /* Methods: */
 
               floating sum = 0.0;
               for (auto x : p) sum += x*x;
-              w (s, t) = 1.0 /sum;
+              w (s, t) = fabs (sum) < epsilon ? 0.0 : 1.0 / sum;
           }
       }
 
@@ -422,9 +435,8 @@ private: /* Methods: */
 
       if (NL >= 1)
           alpha_L[1] = (M_PI*getMat (lightVertices[0].m_prim).colour ()*emission) / PA_light;
-
-      for (size_t i = 2; i <= NL; ++ i)
-          alpha_L[i] = (lightVertices[i - 2].m_col / lightVertices[i - 1].m_pr) * alpha_L[i - 1];
+      for (size_t i = 3; i <= NL; ++ i)
+          alpha_L[i] = (lightVertices[i - 2].m_col / lightVertices[i - 2].m_pr) * alpha_L[i - 1];
 
       return std::move (alpha_L);
   }
@@ -433,7 +445,7 @@ private: /* Methods: */
   std::vector<Colour> computeAlphaE (const VertexList& eyeVertices) const {
       const auto NE = eyeVertices.size ();
       const auto PA_eye = floating { 1.0 };
-      auto alpha_E = std::vector<Colour>(NE+ 1);
+      auto alpha_E = std::vector<Colour>(NE + 1);
 
       alpha_E[0] = Colour { 1.0, 1.0, 1.0 };
 
@@ -441,7 +453,7 @@ private: /* Methods: */
           alpha_E[1] = Colour {1.0, 1.0, 1.0} / PA_eye;
 
       for (size_t i = 2; i <= NE; ++ i)
-          alpha_E[i] = (eyeVertices[i - 2].m_col / eyeVertices[i - 1].m_pr) * alpha_E[i - 1];
+          alpha_E[i] = (eyeVertices[i - 2].m_col / eyeVertices[i - 2].m_pr) * alpha_E[i - 1];
 
       return std::move (alpha_E);
   }
@@ -473,7 +485,7 @@ private: /* Methods: */
     const Intersection intr = intersectWithPrims(ray);
 
     if (!intr.hasIntersections()) {
-      m_col += m_scene.background() * acc;
+      m_col += m_scene.background().colour () * acc;
       return;
     }
 
@@ -550,8 +562,6 @@ private: /* Methods: */
 private: /* Fields: */
   const Scene&  m_scene; ///< Reference to scene.
   Colour        m_col;
-  VertexList    m_light_vertices;
-  VertexList    m_eye_vertices;
 };
 
 #endif

@@ -26,7 +26,7 @@ public: /* Methods: */
   }
 
   /// Intersects ray with primitive on hit
-  virtual void intersect(const Ray&, Intersection&) = 0;
+  virtual void intersect(const Ray&, Intersection&) const = 0;
 
   /// Returns normal of the primitive on given position.
   virtual Vector normal(const Point&) const = 0;

@@ -10,19 +10,30 @@
 #include <boost/thread.hpp>
 #include <string>
 
-Scene::Scene()
-  : m_background (0, 0, 0)
-{ }
+Scene::Scene() {
+    m_background = m_materials.registerMaterial (Material { Colour { 0, 0, 0 } });
+}
 
 void Scene::setPrimitiveManager(PrimitiveManager* pm) {
   m_manager = std::unique_ptr<PrimitiveManager>(pm);
+}
+
+void Scene::setBackground(const Colour& c) {
+    m_background = m_materials.registerMaterial (Material { c });
+}
+
+const Material& Scene::background() const {
+    return m_materials[m_background];
 }
 
 void Scene::setSceneReader(SceneReader* sr) {
   m_scene_reader = std::unique_ptr<SceneReader>(sr);
 }
 
-Scene::~Scene() { }
+Scene::~Scene() {
+    for (auto light : m_lights)
+        delete light;
+}
 
 /**
  * Recursively shoots rays where needed.
@@ -114,7 +125,7 @@ public: /* Methods: */
   { }
 
   void renderRough(Scene& scene) const {
-    Colour c = Raytracer(scene)(scene.m_camera.spawnRay(m_y0, m_x0));
+    const auto c = Raytracer(scene)(scene.m_camera.spawnRay(m_y0, m_x0));
     for (auto& surface : scene.surfaces()) {
       for (int h = m_y0; h < m_y1; ++h) {
         for (int w = m_x0; w < m_x1; ++w) {
@@ -125,21 +136,23 @@ public: /* Methods: */
   }
 
   void renderNice(Scene& scene) const {
+    Raytracer rt { scene };
     for (auto& surface : scene.surfaces()) {
       for (int h = m_y0; h < m_y1; ++h) {
         for (int w = m_x0; w < m_x1; ++w) {
           if (BPT_ENABLED) {
             auto col = Colour { 0.0, 0.0, 0.0 };
-              for (size_t sample = 0; sample < BPT_SAMPLES; ++ sample) {
-                const floating dh = rng () - 0.5;
-                const floating dw = rng () - 0.5;
-                const auto c = Raytracer(scene)(scene.m_camera.spawnRay(h + dh, w + dw));
-                col += (c - col) / (floating) (sample + 1);
-                surface->setPixel(h, w, col);
-              }
+            for (size_t sample = 0; sample < BPT_SAMPLES; ++ sample) {
+              const floating dh = rng () - 0.5;
+              const floating dw = rng () - 0.5;
+              const auto c = rt(scene.m_camera.spawnRay(h + dh, w + dw));
+              col += c;
             }
+
+            surface->setPixel(h, w, col / BPT_SAMPLES);
+          }
           else {
-            surface->setPixel(h, w, Raytracer(scene)(scene.m_camera.spawnRay(h, w)));
+            surface->setPixel(h, w, rt(scene.m_camera.spawnRay(h, w)));
           }
         }
       }
@@ -222,9 +235,12 @@ void Scene::init() {
   m_manager->init();
 }
 
-void Scene::addPrimitive(Primitive* p) { m_manager->addPrimitive(p); }
+void Scene::addPrimitive(const Primitive* p) { m_manager->addPrimitive(p); }
 
-void Scene::addLight(const Light* l) { m_lights.push_back(l); }
+void Scene::addLight(const Light* l) {
+    m_lights.push_back(l);
+    addPrimitive (l->prim ());
+}
 
 const std::vector<const Light*>& Scene::lights() const { return m_lights; }
 

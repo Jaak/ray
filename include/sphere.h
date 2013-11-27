@@ -31,7 +31,7 @@ public: /* Methods: */
       return normalised(p - m_center);
   }
 
-  void intersect(const Ray& ray, Intersection& intr) {
+  void intersect(const Ray& ray, Intersection& intr) const {
     const Vector tmp = ray.origin() - m_center;
     const floating p = tmp.dot(ray.dir());
     const floating q = tmp.sqrlength() - m_sqrradius;

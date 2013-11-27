@@ -5,24 +5,30 @@
 #include <vector>
 
 class Materials {
-  typedef std::vector<Material> impl_t;
+    typedef std::vector<Material> impl_t;
 
 public: /* Methods: */
 
-  material_index_t registerMaterial(Material mat) {
-    material_index_t idx = m_materials.size();
-    m_materials.push_back(mat);
-    return idx;
-  }
+    Materials ()
+        : m_materials ()
+    {
+        m_materials.emplace_back (Colour { 0, 0, 0 });
+    }
 
-  const Material& operator[](material_index_t idx) const {
-    return m_materials[idx];
-  }
+    material_index_t registerMaterial(Material mat) {
+        material_index_t idx = m_materials.size();
+        m_materials.push_back(mat);
+        return idx;
+    }
 
-  void shrink_to_fit() { impl_t(m_materials).swap(m_materials); }
+    const Material& operator[](material_index_t idx) const {
+        return m_materials[idx];
+    }
+
+    void shrink_to_fit() { impl_t(m_materials).swap(m_materials); }
 
 private: /* Fields: */
-  impl_t m_materials;
+    impl_t m_materials;
 };
 
 #endif

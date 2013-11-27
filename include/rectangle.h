@@ -29,7 +29,7 @@ public:
     , m_normal(normalised(u.cross(v)))
   { }
 
-  void intersect (const Ray& ray, Intersection& intr) {
+  void intersect (const Ray& ray, Intersection& intr) const {
     const Vector rhs = ray.origin() - m_point;
     const Vector D = ray.dir();
 

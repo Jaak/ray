@@ -22,7 +22,7 @@ public: /* Methods: */
 
   Vector normal(const Point&) const { return m_normal; }
 
-  void intersect(const Ray& ray, Intersection& intr) {
+  void intersect(const Ray& ray, Intersection& intr) const {
     const Point o = ray.origin();
     const Vector vs[] = { m_point[0] - o, m_point[1] - o, m_point[2] - o };
     floating a = m_normal.dot(ray.dir());

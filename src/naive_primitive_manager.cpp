@@ -7,11 +7,13 @@
 unsigned long long icount = 0;
 
 NaivePrimitiveManager::~NaivePrimitiveManager() {
-  for (Primitive* p : m_prims) {
-    delete p;
-  }
+    for (auto p : m_prims) {
+        if (! p->is_light ()) {
+            delete p;
+        }
+    }
 
-  std::cout << "Intersections : " << icount << std::endl;
+    std::cout << "Intersections : " << icount << std::endl;
 }
 
 Intersection NaivePrimitiveManager::intersectWithPrims(const Ray& ray) const {
