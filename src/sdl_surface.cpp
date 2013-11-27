@@ -39,9 +39,9 @@ public: /* Methods: */
     if (m_stopped)
       return;
 
-    const auto r = (uint8_t)(255 * fmin(1.0, fmax(c.r, 0.0)));
-    const auto g = (uint8_t)(255 * fmin(1.0, fmax(c.g, 0.0)));
-    const auto b = (uint8_t)(255 * fmin(1.0, fmax(c.b, 0.0)));
+    const auto r = (uint8_t)(255.0 * pow(clamp(c.r, 0.0, 1.0), 1.0/2.2));
+    const auto g = (uint8_t)(255.0 * pow(clamp(c.g, 0.0, 1.0), 1.0/2.2));
+    const auto b = (uint8_t)(255.0 * pow(clamp(c.b, 0.0, 1.0), 1.0/2.2));
     const auto bpp = m_surf->format->BytesPerPixel;
     const auto col = SDL_MapRGB(m_surf->format, r, g, b);
     const auto offset = h * m_surf->pitch + w * bpp;

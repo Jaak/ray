@@ -38,7 +38,7 @@ constexpr bool BPT_ENABLED = false;
 /**
  * How many samples per pixel to take.
  */
-constexpr std::size_t BPT_SAMPLES = 25;
+constexpr std::size_t BPT_SAMPLES = 15;
 
 /**
  * This constant is used to determin if subpixel block has to be subdivided.

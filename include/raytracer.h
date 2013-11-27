@@ -21,7 +21,7 @@ enum EventType {
     EYE
 };
 
-constexpr floating emission = 1000000.0;
+constexpr floating emission = 200000.0;
 
 // TODO: i think that our material representation is all wrong...
 
@@ -363,6 +363,10 @@ private: /* Methods: */
               p[s] = 1.0;
               if (s == 0) {
                   p[1] = p[0] * PA_light / generationPr (xs[1], xs[0]) * gcache (xs[1], xs[0]);
+                  if (p[1] > 10e5) {
+                      p[1] = 0.0;
+                  }
+
                   for (size_t i = s + 1; i < k; ++ i) {
                       const auto denom = gcache (xs[i + 1], xs[i]) * generationPr (xs[i + 1], xs[i]);
                       p[i + 1] = p[i] * gcache (xs[i - 1], xs[i]) * generationPr (xs[i - 1], xs[i]) / denom;
@@ -435,6 +439,8 @@ private: /* Methods: */
 
       if (NL >= 1)
           alpha_L[1] = (M_PI*getMat (lightVertices[0].m_prim).colour ()*emission) / PA_light;
+      if (NL >= 2)
+          alpha_L[2] = (1.0 / M_PI) / lightVertices[0].m_pr * alpha_L[1];
       for (size_t i = 3; i <= NL; ++ i)
           alpha_L[i] = (lightVertices[i - 2].m_col / lightVertices[i - 2].m_pr) * alpha_L[i - 1];
 
