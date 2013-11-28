@@ -84,7 +84,7 @@ constexpr floating RAY_MIN_COLOUR_TOLERANCE = 0.000001;
 
 #ifdef __GNUC__
   #define GCC_VERSION (__GNUC__ * 10000 + __GNUC_MINOR__ * 100 + __GNUC_PATHLEVEL__)
-  #if GCC_VERSION >= 30800
+  #if GCC_VERSION >= 40800
     #define HAVE_THREAD_LOCAL_STORAGE 1
   #endif
 #endif
