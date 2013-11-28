@@ -183,9 +183,9 @@ public: /* Methods: */
   uint32_t getPixel () const {
     using namespace std;
     uint32_t pix = 0;
-    pix  = (uint32_t)(255.0 * pow(clamp(r, 0.0, 1.0), 1.0/2.2)) << 16;
-    pix |= (uint32_t)(255.0 * pow(clamp(g, 0.0, 1.0), 1.0/2.2)) << 8;
-    pix |= (uint32_t)(255.0 * pow(clamp(b, 0.0, 1.0), 1.0/2.2));
+    pix  = (uint32_t)(255.0 * clamp(r, 0.0, 1.0)) << 16;
+    pix |= (uint32_t)(255.0 * clamp(g, 0.0, 1.0)) << 8;
+    pix |= (uint32_t)(255.0 * clamp(b, 0.0, 1.0));
     return pix;
   }
 
