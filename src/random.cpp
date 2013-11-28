@@ -1,7 +1,7 @@
 #include "random.h"
 
 #ifndef HAVE_THREAD_LOCAL_STORAGE
-  #include <boost/trhead/tss.hpp>
+  #include <boost/thread/tss.hpp>
 #endif
 
 Engine& rng_engine () {
