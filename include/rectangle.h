@@ -41,7 +41,7 @@ public:
     if (h < 0 || h > 1 || k < 0 || k > 1)
       return;
 
-    intr.update (ray, this, t, Intersection::Type::EXTERNAL);
+    intr.update (ray, this, t);
   }
 
   Vector normal(const Point&) const { return m_normal; }

@@ -31,6 +31,26 @@ inline floating clamp (floating x, floating mn = 0.0, floating mx = 1.0) {
 }
 
 /**
+ * @note Code based on https://en.wikipedia.org/wiki/Fresnel_equations
+ * @param cosI Co-sine of incoming vector.
+ * @param n1 Incoming medium.
+ * @param n2 Outgoing medium.
+ * @return Probability of reflection between two refractive mediums
+ */
+inline floating fresnel (floating cosI, floating n1, floating n2) {
+    if (cosI < 0.0) {
+        return fresnel (- cosI, n2, n1);
+    }
+
+    const auto n = n1 / n2;
+    const auto sinISq = 1.0 - cosI*cosI;
+    const auto term = std::sqrt(1.0 - n*n*sinISq);
+    const auto Rs = (n1*cosI - n2*term) / (n1*cosI + n2*term);
+    const auto Rp = (n1*term - n2*cosI) / (n1*term + n2*cosI);
+    return (Rs*Rs + Rp*Rp) / 2.0;
+}
+
+/**
  * If bidirectional path tracing should be enabled.
  */
 constexpr bool BPT_ENABLED = false;

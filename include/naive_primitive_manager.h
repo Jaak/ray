@@ -20,14 +20,14 @@ public: /* Methods: */
 
 	void init() { }
 	
-	void addPrimitive(Primitive* p) {
+    void addPrimitive(const Primitive* p) {
 		m_prims.push_back(p);
 	}
 
 	Intersection intersectWithPrims(const Ray& ray) const;
 
 private: /* Fields: */
-	std::vector<Primitive* > m_prims;
+    std::vector<const Primitive* > m_prims;
 };
 
 #endif

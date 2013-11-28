@@ -41,7 +41,7 @@ public: /* Methods: */
     }
 
     // TODO: side of the intersection matters!
-    intr.update(ray, this, a, Intersection::Type::EXTERNAL);
+    intr.update(ray, this, a);
   }
 
   floating getLeftExtreme(Axes axis) const {

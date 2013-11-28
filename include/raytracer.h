@@ -9,19 +9,17 @@
 #include "random.h"
 #include "ray.h"
 #include "scene.h"
+#include "vertex.h"
+#include "table.h"
+
+// just to force compilation
+#include "frame.h"
+#include "brdf.h"
 
 #include <boost/range/adaptor/reversed.hpp>
 #include <map>
 
-enum EventType {
-    DIFFUSE,
-    REFLECT,
-    REFRACT,
-    LIGHT,
-    EYE
-};
-
-constexpr floating emission = 500000.0;
+constexpr floating emission = 800000.0;
 
 // TODO: i think that our material representation is all wrong...
 
@@ -45,51 +43,6 @@ static inline floating refractPr (const Material& m) {
     return m.t () / (m.kd () + m.ks () + m.t ());
 }
 
-struct Vertex {
-  Point            m_pos;
-  Vector           m_normal;
-  Colour           m_col; // TODO: use proper BRDF here
-  const Primitive* m_prim;
-  floating         m_pr;
-  EventType        m_event;
-
-  Vertex (const Point& pos, const Vector& normal, const Colour& col, const Primitive* prim, floating pr, EventType event)
-      : m_pos {pos}
-      , m_normal {normal}
-      , m_col {col}
-      , m_prim {prim}
-      , m_pr {pr}
-      , m_event {event}
-  { }
-};
-
-template <typename T>
-class table : std::vector<T> {
-public: /* Methods: */
-
-    table (size_t width, size_t height, T def = T ())
-        : std::vector<T>(width*height, def)
-        , m_width { width }
-        , m_height { height }
-    { }
-
-    T& operator () (size_t i, size_t j) {
-        assert (i < m_width && j < m_height);
-        return (*this)[i*m_height + j];
-    }
-
-    const T& operator () (size_t i, size_t j) const {
-        assert (i < m_width && j < m_height);
-        return (*this)[i*m_height + j];
-    }
-
-private: /* Fields: */
-    const size_t m_width;
-    const size_t m_height;
-};
-
-using VertexList = std::vector<Vertex>;
-
 floating generationPr (const Vertex* from, const Vertex* to) {
     assert (from != nullptr && to != nullptr);
     switch (from->m_event) {
@@ -104,7 +57,7 @@ floating generationPr (const Vertex* from, const Vertex* to) {
     case REFRACT:
         return 1.0;
     case EYE:
-        return 1.0; // ??
+        return 0.0; // ??
     }
 }
 
@@ -215,7 +168,10 @@ private: /* Methods: */
     const auto objCol = m.colour();
     const auto point = intr.point();
     const auto V = ray.dir();
-    const auto N = ray.normal(intr);
+    const auto N = prim->normal (point);
+    const auto internal = V.dot(N) > 0.0;
+    const auto into = ! internal;
+    const auto N2 = internal ? -N : N;
 
     floating pr = std::max (objCol.r, std::max (objCol.g, objCol.b));
 
@@ -233,25 +189,61 @@ private: /* Methods: */
     switch (getEventType (m)) {
     case LIGHT:
         vertices.emplace_back (point, N, objCol / M_PI, prim, pr / M_PI, LIGHT);
-        return;
+        break;
     case DIFFUSE: {
         const auto dir = rngHemisphereVector (N);
         const auto R = Ray { point.nudgePoint (dir), dir };
         vertices.emplace_back (point, N, objCol / M_PI, prim, pr / M_PI, DIFFUSE);
         trace (R, depth + 1, iior, vertices);
-        return;
     }   break;
-    case REFRACT:
     case REFLECT: {
         const auto dir = reflect (V, N);
         const auto R = Ray { point.nudgePoint (dir), dir };
         vertices.emplace_back (point, N, objCol, prim, pr, REFLECT);
         trace (R, depth + 1, iior, vertices);
-        return;
+    }   break;
+    case REFRACT: {
+        // TODO: doesn't seem to be working yet...
+        floating n1 = iior, n2 = m.ior();
+        const auto n = into ? n1 / n2 : n2 / n1;
+        const auto cosT1 = V.dot(N2);
+        const auto cosT2 = 1.0 - n * n * (1.0 - cosT1 * cosT1);
+        if (cosT2 < 0.0) {
+            const auto reflDir = reflect (V, N);
+            const auto R = Ray { point.nudgePoint (reflDir), reflDir };
+            vertices.emplace_back(point, N2, objCol, prim, pr, REFLECT);
+            trace (R, depth+1, iior, vertices);
+            break;
+        }
+
+        const auto T = normalised (n * V - (into ? 1.0 : -1.0) * N * (n * cosT1 + sqrt (cosT2)));
+        vertices.emplace_back(point, - N2, objCol, prim, pr, REFRACT);
+        const auto R = Ray { point.nudgePoint (T), T };
+        trace (R, depth+1, into ? n2 : n1, vertices);
+
+//        const auto a = into ? n2 - n1 : n1 - n2;
+//        const auto b = n1 + n2;
+//        const auto R0 = (a * a) / (b * b);
+//        const auto c = 1.0 - (into ? - cosT1 : T.dot(N));
+//        const auto Re = R0 + (1.0 - R0) * pow (c, 5.0);
+//        const auto Tr = 1.0 - Re;
+//        const auto prob = 0.25 + 0.5 * Re;
+//        if (rng () < prob) {
+//            vertices.emplace_back(point, N, Re*objCol, prim, pr*prob, REFLECT);
+//            const auto R = Ray { point.nudgePoint (reflDir), reflDir };
+//            trace (R, depth+1, iior, vertices);
+//            break;
+//        }
+//        else {
+//            vertices.emplace_back(point, -N, Tr*objCol, prim, pr*(1.0 - prob), REFRACT);
+//            const auto R = Ray { point.nudgePoint (T), T };
+//            trace (R, depth+1, n2, vertices);
+//            break;
+//        }
+
     }   break;
     case EYE:
         assert (false && "No support for refraction in path tracer yet!");
-        abort ();
         break;
     }
   }
@@ -397,7 +389,6 @@ private: /* Methods: */
               for (size_t i = 0; i <= k; ++ i) {
                   switch (xs[i]->m_event) {
                   case REFLECT:
-                  case REFRACT:
                       p[i] = p[i + 1] = 0.0;
                   default:
                       break;
@@ -503,7 +494,9 @@ private: /* Methods: */
 
     const Point point = intr.point();
     const Vector V = ray.dir();
-    const Vector N = ray.normal(intr);
+    const Vector N = prim->normal (point);
+    const auto internal = V.dot(N) > 0.0;
+    const auto N2 = internal ? -N : N;
 
     for (const Light* l : m_scene.lights()) {
       Vector L;
@@ -529,30 +522,21 @@ private: /* Methods: */
 
     // refraction
     if (m.t() > 0) {
-      const Vector N2 = N;
       floating n1 = iior, n2 = m.ior();
 
-      // TODO: right now we assume that we are always exiting to air
-      // do we need to keep stack of refraction indices?
-      if (intr.isInternal ()) {
-        n1 = n2;
-        n2 = 1.0;
-      }
-
-      const floating n = n1 / n2;
-      const floating cosT1 = (-V).dot(N2);
+      const floating n = internal ? n2 / n1 : n1 / n2;
+      const floating cosT1 = V.dot(N2);
       const floating cosT2 = 1.0 - n * n * (1.0 - cosT1 * cosT1);
 
       if (cosT2 > 0.0) {
-        const floating cosT2sqrt = cosT1 > 0 ? - sqrt(cosT2) : sqrt(cosT2);
-        const Vector T = n * V + (n * cosT1 + cosT2sqrt) * N2;
+        const auto T = normalised (n * V - (internal ? -1.0 : 1.0) * N * (n * cosT1 + sqrt (cosT2)));
         Colour transp = { 1, 1, 1 }; // transparency of the object
-        if (intr.isInternal()) { // Beer-Lambert law
+        if (internal) { // Beer-Lambert law
           const Colour t = -intr.dist() * 0.15 * m.colour();
           transp = expf (t);
         }
 
-        run(shootRay(point, T), depth + 1, n2, m.t() * acc * transp);
+        run(shootRay(point, T), depth + 1, internal ? n2 : n1, m.t() * acc * transp);
       }
     }
   }

@@ -122,6 +122,16 @@ inline Vector operator/(const Vector& v, floating s) {
   return v * (floating(1.0) / s);
 }
 
+inline Vector pickOrthogonal (const Vector& dir) {
+  const Vector X { 1, 0, 0 };
+  const Vector Y { 0, 1, 0 };
+  return normalised (dir.cross(fabs(dir.x) < 0.01 ? Y : X));
+}
+
+inline Vector reflect (const Vector& I, const Vector& N) {
+  return I - 2.0 * N.dot(I) * N;
+}
+
 /***********************
  * 3 dimensional point *
  ***********************/
@@ -155,10 +165,6 @@ inline Point operator+(const Vector& v, const Point& p) { return p + v; }
 
 inline Point Point::nudgePoint(const Vector& v) const {
   return *this + ray_epsilon * v;
-}
-
-inline Vector reflect (const Vector& I, const Vector& N) {
-  return I - 2.0 * N.dot(I) * N;
 }
 
 /****************************

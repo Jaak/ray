@@ -40,9 +40,18 @@ static inline Vector rngHemisphereVector (const Vector& dir) {
     const auto u = normalised (up.cross (fabs(up.x) < 0.01 ? Vector {0, 1, 0} : Vector {1, 0, 0}));
     const auto v = u.cross(up); // no need to normalise!
     const auto H = rngHemisphere ();
-    return H.x*u + H.y*v + H.z*up;
+    const auto out = H.x*u + H.y*v + H.z*up;
+    return out;
 }
 
-// TODO: sampling
+static inline Vector sampleHemisphereVector (const Vector& dir, floating& cosT) {
+    const auto up = normalised (dir);
+    const auto u = normalised (up.cross (fabs(up.x) < 0.01 ? Vector {0, 1, 0} : Vector {1, 0, 0}));
+    const auto v = u.cross(up); // no need to normalise!
+    const auto H = rngHemisphere ();
+    const auto out = H.x*u + H.y*v + H.z*up;
+    cosT = up.dot (out);
+    return out;
+}
 
 #endif

@@ -98,7 +98,7 @@ public: /* Methods: */
       return;
 
     // TODO: side of the intersection matters
-    intr.update (ray, this, t, Intersection::Type::EXTERNAL);
+    intr.update (ray, this, t);
   }
 
   floating getLeftExtreme(Axes axis) const {
