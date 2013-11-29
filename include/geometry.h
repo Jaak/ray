@@ -99,6 +99,10 @@ public: /* Fields: */
 
 inline Vector normalised(Vector u) { return u.normalise(); }
 
+inline Vector normalised (floating x, floating y, floating z) {
+    return normalised (Vector {x, y, z});
+}
+
 // whatever floats your boat
 inline Vector normalized(Vector u) { return normalised(u); }
 

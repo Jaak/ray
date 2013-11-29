@@ -19,7 +19,7 @@
 #include <boost/range/adaptor/reversed.hpp>
 #include <map>
 
-constexpr floating emission = 800000.0;
+constexpr floating emission = 20.0;
 
 // TODO: i think that our material representation is all wrong...
 
@@ -65,7 +65,7 @@ floating generationPr (const Vertex* from, const Vertex* to) {
 Colour brdf (const Material& m, const Vector&, const Vector&) {
   if (reflectPr (m) > 0) return Colour { 0, 0, 0 };
   if (refractPr (m) > 0) return Colour { 0, 0, 0 };
-    return m.colour () * (diffusePr (m) / M_PI + reflectPr (m) + refractPr (m));
+    return m.colour () * diffusePr (m) / M_PI;
 }
 
   /*****************************
@@ -98,11 +98,17 @@ private: /* Methods: */
     const auto from2to = normalised(to.m_pos - from.m_pos);
     const auto to2from = - from2to;
     const auto testRay = Ray{ from.m_pos.nudgePoint(from2to), from2to};
-    const auto intr = intersectWithPrims(testRay);
     const auto cosT0 = from.m_normal.dot(from2to);
     const auto cosT1 = to.m_normal.dot(to2from);
 
-    if (cosT0 >= 0.0 && cosT1 >= 0.0 && fabs (intr.dist() - sqrt(sqLen)) < 2.0*ray_epsilon) {
+    if (cosT0 < 0.0) return 0.0;
+    if (cosT1 < 0.0) return 0.0;
+
+    const auto intr = intersectWithPrims(testRay);
+    if (! intr.hasIntersections ())
+        return 0.0;
+
+    if (fabs (intr.dist() - sqrt(sqLen)) < 2.0*ray_epsilon) {
       return (cosT0 * cosT1) / sqLen;
     } else {
       return 0.0;
@@ -237,31 +243,37 @@ private: /* Methods: */
   }
 
   Colour run (const Ray& ray) {
-      return radiance (traceEye (ray), traceLight ());
+      floating eyePA, lightPA;
+      const auto evs = traceEye (ray, eyePA);
+      const auto lvs = traceLight (lightPA);
+      // std::cerr << eyePA << ", " << lightPA << std::endl;
+      return radiance (eyePA, std::move (evs), lightPA, std::move (lvs));
   }
 
   // TODO: should we add the initial point as a vertex?
-  VertexList traceEye (const Ray& R) {
+  VertexList traceEye (const Ray& R, floating& eyePA) {
       VertexList vertices;
       vertices.reserve (RAY_MAX_REC_DEPTH);
+      eyePA = 1.0;
       trace (R, 1, 1.0, vertices);
       return std::move (vertices);
   }
 
   // TODO: all lights emit same intensity light!
-  VertexList traceLight () {
+  VertexList traceLight (floating& lightPA) {
       assert (! m_scene.lights ().empty ());
       const auto nLights = m_scene.lights ().size ();
       const floating lightPr = 1.0 / (floating) nLights;
       const auto light = m_scene.lights ()[nLights - 1];
       const auto R = light->sample ();
       const auto N = light->prim()->normal(R.origin ());
+      lightPA = light->lightPA ();
 
       VertexList vertices;
       vertices.reserve (RAY_MAX_REC_DEPTH);
       vertices.emplace_back (
         R.origin(), N, light->colour(), light->prim(),
-        1.0 / (2.0 * M_PI * fmax (0.0, N.dot (R.dir ()))),
+        1.0 / (2.0 * M_PI * N.dot (R.dir ())),
         LIGHT
       );
       trace (R, 1, lightPr, vertices);
@@ -274,14 +286,11 @@ private: /* Methods: */
       return m_scene.materials ()[prim->material ()];
   }
 
-  Colour radiance (const VertexList& eyeVertices, const VertexList& lightVertices) {
+  Colour radiance (floating lightPA, const VertexList& eyeVertices, floating eyePA, const VertexList& lightVertices) {
       const auto NE = eyeVertices.size ();
       const auto NL = lightVertices.size ();
-
-      const auto PA_light = floating { 1.0 };
-      const auto PA_eye = floating { 1.0 };
-      const auto alpha_L = computeAlphaL (lightVertices);
-      const auto alpha_E = computeAlphaE (eyeVertices);
+      const auto alpha_L = computeAlphaL (lightPA, lightVertices);
+      const auto alpha_E = computeAlphaE (eyePA, eyeVertices);
 
       // One below equation 10.8
       table<Colour> c = { NL + 1, NE + 1, { 0.0, 0.0, 0.0 } };
@@ -339,7 +348,7 @@ private: /* Methods: */
               p.resize (s + t + 1, 0.0);
               p[s] = 1.0;
               if (s == 0) {
-                  p[1] = p[0] * PA_light / generationPr (xs[1], xs[0]) * gcache (xs[1], xs[0]);
+                  p[1] = p[0] * lightPA / (generationPr (xs[1], xs[0]) * gcache (xs[1], xs[0]));
 
                   for (size_t i = s + 1; i < k; ++ i) {
                       const auto denom = gcache (xs[i + 1], xs[i]) * generationPr (xs[i + 1], xs[i]);
@@ -349,7 +358,7 @@ private: /* Methods: */
 
                   }
 
-                  p[k + 1] = p[k] * gcache (xs[k - 1], xs[k]) * generationPr (xs[k - 1], xs[k]) / PA_eye;
+                  p[k + 1] = p[k] * gcache (xs[k - 1], xs[k]) * generationPr (xs[k - 1], xs[k]) / eyePA;
               }
               else {
 
@@ -361,7 +370,7 @@ private: /* Methods: */
                       }
                   }
 
-                  p[k + 1] = p[k] * gcache(xs[k - 1], xs[k]) * generationPr(xs[k - 1], xs[k]) / PA_eye;
+                  p[k + 1] = p[k] * gcache(xs[k - 1], xs[k]) * generationPr(xs[k - 1], xs[k]) / eyePA;
 
                   for (size_t i = s - 1; i > 0; -- i) {
                       const auto denom = gcache(xs[i - 1], xs[i]) * generationPr(xs[i - 1], xs[i]);
@@ -371,12 +380,13 @@ private: /* Methods: */
                       }
                   }
 
-                  p[0] = p[1] * gcache(xs[1], xs[0]) * generationPr(xs[1], xs[0]) / PA_light;
+                  p[0] = p[1] * gcache(xs[1], xs[0]) * generationPr(xs[1], xs[0]) / lightPA;
               }
 
               for (size_t i = 0; i <= k; ++ i) {
                   switch (xs[i]->m_event) {
                   case REFLECT:
+                  case REFRACT:
                       p[i] = p[i + 1] = 0.0;
                   default:
                       break;
@@ -401,15 +411,14 @@ private: /* Methods: */
   }
 
   // Equation 10.6
-  std::vector<Colour> computeAlphaL (const VertexList& lightVertices) const {
+  std::vector<Colour> computeAlphaL (floating lightPA, const VertexList& lightVertices) const {
       const auto NL = lightVertices.size ();
-      const auto PA_light = floating { 1.0 };
       auto alpha_L = std::vector<Colour>(NL + 1);
 
       alpha_L[0] = Colour { 1.0, 1.0, 1.0 };
 
       if (NL >= 1)
-          alpha_L[1] = (M_PI*getMat (lightVertices[0].m_prim).colour ()*emission) / PA_light;
+          alpha_L[1] = (M_PI*getMat (lightVertices[0].m_prim).colour ()*emission) / lightPA;
       if (NL >= 2)
           alpha_L[2] = (1.0 / M_PI) / lightVertices[0].m_pr * alpha_L[1];
       for (size_t i = 3; i <= NL; ++ i)
@@ -419,15 +428,14 @@ private: /* Methods: */
   }
 
   // Equation 10.7
-  std::vector<Colour> computeAlphaE (const VertexList& eyeVertices) const {
+  std::vector<Colour> computeAlphaE (floating eyePA, const VertexList& eyeVertices) const {
       const auto NE = eyeVertices.size ();
-      const auto PA_eye = floating { 1.0 };
       auto alpha_E = std::vector<Colour>(NE + 1);
 
       alpha_E[0] = Colour { 1.0, 1.0, 1.0 };
 
       if (NE >= 1)
-          alpha_E[1] = Colour {1.0, 1.0, 1.0} / PA_eye;
+          alpha_E[1] = Colour {1.0, 1.0, 1.0} / eyePA;
 
       for (size_t i = 2; i <= NE; ++ i)
           alpha_E[i] = (eyeVertices[i - 2].m_col / eyeVertices[i - 2].m_pr) * alpha_E[i - 1];

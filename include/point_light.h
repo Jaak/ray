@@ -28,6 +28,10 @@ public: /* Methods: */
   Ray sample () const {
     return { center(), rngSphere ()};
   }
+
+  floating lightPA () const {
+      return 1.0;
+  }
 };
 
 /**
@@ -50,6 +54,13 @@ public: /* Methods: */
         const auto point = center () + radius ()*normal;
         const auto dir = rngHemisphereVector (normal);
         return { point.nudgePoint (dir), dir };
+    }
+
+    floating lightPA () const {
+        if (radius () < epsilon)
+            return 1.0;
+
+        return 1.0 / (4.0 * M_PI * m_sqrradius);
     }
 };
 

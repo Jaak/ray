@@ -61,7 +61,7 @@ public: /* Methods: */
     o << '}';
   }
 
-private: /* Fields: */
+protected: /* Fields: */
   const Point    m_center;    ///< Center of the sphere
   const floating m_radius;    ///< Radius of the sphere
   const floating m_sqrradius; ///< Square of the spheres radius
