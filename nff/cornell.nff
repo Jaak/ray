@@ -19,7 +19,9 @@ hither 0.1
 resolution 512 512
 
 #light source
-L s 10 275 530 275
+#ls 10 275 530 275
+la  200 548 50  150 0 0  0 0 200
+
 
 #Right wall - green
 

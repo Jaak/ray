@@ -22,26 +22,34 @@ private: /* Methods: */
 
 public:
 
-  Rectangle(const Point& point, const Vector& u, const Vector& v)
-    : m_point(point)
-    , m_u(u)
-    , m_v(v)
-    , m_normal(normalised(u.cross(v)))
+  Rectangle(const Point& point, const Vector& u, const Vector& v, bool isLight = false)
+    : Primitive { isLight }
+    , m_point { point }
+    , m_u { u }
+    , m_v { v }
+    , m_normal { normalised (u.cross (v)) }
+    , m_d { -m_normal.dot (m_point) }
   { }
 
   void intersect (const Ray& ray, Intersection& intr) const {
-    const Vector rhs = ray.origin() - m_point;
-    const Vector D = ray.dir();
+    const auto O = ray.origin();
+    const auto D = ray.dir();
+    floating a = m_normal.dot(D);
 
-    const floating dD = 1.0 / det(m_u, m_v, -D);
-    const floating h  = dD * det(rhs, m_v, -D);
-    const floating k  = dD * det(m_u, rhs, -D);
-    const floating t  = dD * det(m_u, m_v, rhs);
-
-    if (h < 0 || h > 1 || k < 0 || k > 1)
+    if (almost_zero(a)) {
       return;
+    }
 
-    intr.update (ray, this, t);
+    a = -(m_normal.dot(O) + m_d) / a;
+    const Vector vs[] = { m_point - O, m_point + m_u - O, m_point + m_u + m_v - O, m_point + m_v - O};
+    const Vector pmo = a * ray.dir();
+    for (size_t i = 0; i <= 3; ++ i) {
+      const auto j = (i + 1) % 4;
+      if (vs[j].cross(vs[i]).dot(pmo) < 0)
+        return;
+    }
+
+    intr.update(ray, this, a);
   }
 
   Vector normal(const Point&) const { return m_normal; }
@@ -62,11 +70,10 @@ public:
       m_point[axis] + m_v[axis] + m_u[axis])));
   }
 
-  void output(std::ostream&) const { }
-
 protected:
   const Point m_point;
   const Vector m_u, m_v, m_normal;
+  const floating m_d;
 };
 
 #endif

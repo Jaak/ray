@@ -32,6 +32,7 @@ set(INCLUDEFILES
   "${RAY_INCLUDE_DIR}/naive_primitive_manager.h"
   "${RAY_INCLUDE_DIR}/nff_scene_reader.h"
   "${RAY_INCLUDE_DIR}/parser.h"
+  "${RAY_INCLUDE_DIR}/pathtracer.h"
   "${RAY_INCLUDE_DIR}/pixel.h"
   "${RAY_INCLUDE_DIR}/png_surface.h"
   "${RAY_INCLUDE_DIR}/point_light.h"

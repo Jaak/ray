@@ -6,6 +6,7 @@
 #include "primitive.h"
 #include "intersection.h"
 #include "geometry.h"
+#include "ray.h"
 
 /**
  * @ingroup Primitives
@@ -40,7 +41,6 @@ public: /* Methods: */
       return;
     }
 
-    // TODO: side of the intersection matters!
     intr.update(ray, this, a);
   }
 
@@ -70,7 +70,7 @@ private: /* Methods: */
     return -m_normal.dot(m_point[0]);
   }
 
-private: /* Fields: */ 
+protected: /* Fields: */ 
   const Point     m_point[3]; ///< The points of the triangle
   const Vector    m_normal;   ///< Normal of the triangle
   const floating  m_d;        ///< With m_normal represents the plane of the triangle.

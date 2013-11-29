@@ -100,7 +100,7 @@ fmterr:
   exit(1);
 }
 
-void do_light(Scene& scene, FILE* fp) {
+void do_regular_light (Scene& scene, FILE* fp) {
   float x, y, z, r = 1.0, g = 1.0, b = 1.0;
   const auto n = fscanf(fp, "%f %f %f %f %f %f", &x, &y, &z, &r, &g, &b);
   if (n != 3 && n != 6) {
@@ -113,29 +113,52 @@ void do_light(Scene& scene, FILE* fp) {
 }
 
 // TODO: more area lights
-void do_area_light(Scene& scene, FILE* fp) {
-  int c;
-  while ((c = getc (fp)) != EOF ) {
-      if (! is_whitespace (c))
-          break;
-  }
+void do_sphere_light(Scene& scene, FILE* fp) {
+    float R, x, y, z, r = 1.0, g = 1.0, b = 1.0;
+    const auto n = fscanf(fp, "%f %f %f %f %f %f %f", &R, &x, &y, &z, &r, &g, &b);
+    if (n != 4 && n != 7) {
+        show_error ("Spherical area light source syntax error");
+        exit (1);
+    }
 
-  // Sphere area light
+    auto light = new SphereLight { Point { x, y, z}, R, Colour { r, g, b } };
+    scene.addLight (light);
+}
+
+void do_area_light (Scene& scene, FILE* fp) {
+    float x, y, z, ux, uy, uz, vx, vy, vz, r = 1.0, g = 1.0, b = 1.0;
+    const auto n = fscanf(fp, "%f %f %f %f %f %f %f %f %f %f %f %f",
+      &x, &y, &z, &ux, &uy, &uz, &vx, &vy, &vz, &r, &g, &b);
+    if (n != 9 && n != 12) {
+        show_error ("Rectangular area light source syntax error");
+        exit (1);
+    }
+
+    auto light = new AreaLight {
+      Point { x, y, z},
+      Vector { ux, uy, uz },
+      Vector { vx, vy, vz },
+      Colour { r, g, b }
+    };
+    scene.addLight (light);
+}
+
+void do_light(Scene& scene, FILE* fp) {
+
+  const auto c = getc(fp);
+
   if (c == 's') {
-      float R, x, y, z, r = 1.0, g = 1.0, b = 1.0;
-      const auto n = fscanf(fp, "%f %f %f %f %f %f %f", &R, &x, &y, &z, &r, &g, &b);
-      if (n != 4 && n != 7) {
-          show_error ("Spherical area light source syntax error");
-          exit (1);
-      }
+    do_sphere_light (scene, fp);
+    return;
+  }
 
-      auto light = new SphereLight { Point { x, y, z}, R, Colour { r, g, b } };
-      scene.addLight (light);
+  if (c == 'a') {
+    do_area_light (scene, fp);
+    return;
   }
-  else {
-      show_error ("Area light syntax error");
-      exit (1);
-  }
+  
+  ungetc(c, fp);
+  do_regular_light (scene, fp);
 }
 
 void do_background(Scene& scene, FILE* fp) {
@@ -303,7 +326,6 @@ parse_nff(Scene& scene, FILE* fp)
       case '#': do_comment(fp); break;
       case 'v': do_view(scene, fp); break;
       case 'l': do_light(scene, fp); break;
-      case 'L': do_area_light (scene, fp); break;
       case 'b': do_background(scene, fp); break;
       case 'f': do_fill(scene, fp); break;
       case 'c': do_cone(scene, fp); break;

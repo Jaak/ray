@@ -29,7 +29,7 @@ public: /* Methods: */
   }
 
   Vector toLocal (Vector v) const {
-    return { v.dot(m_x), v.dot(m_y), v.dot(m_z) };
+    return Vector { v.dot(m_x), v.dot(m_y), v.dot(m_z) };
   }
 
   const Vector& normal () const { return m_z; }

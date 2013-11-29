@@ -125,7 +125,7 @@ inline Vector operator/(const Vector& v, floating s) {
 inline Vector pickOrthogonal (const Vector& dir) {
   const Vector X { 1, 0, 0 };
   const Vector Y { 0, 1, 0 };
-  return normalised (dir.cross(fabs(dir.x) < 0.01 ? Y : X));
+  return normalised (dir.cross(fabs(dir.x) < 0.01 ? X : Y));
 }
 
 inline Vector reflect (const Vector& I, const Vector& N) {
@@ -196,6 +196,13 @@ public: /* Methods: */
   }
 
   bool close(const Colour& c) const { return almost_zero(diff(c)); }
+
+  Colour& operator += (const Colour& c) {
+    r += c.r;
+    g += c.g;
+    b += c.b;
+    return *this;
+  }
 
   friend std::ostream& operator<<(std::ostream& os, const Colour& p) {
     os << "Colour {" << p.r << "," << p.g << "," << p.b << "}";

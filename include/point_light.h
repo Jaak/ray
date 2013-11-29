@@ -49,7 +49,7 @@ public: /* Methods: */
         const auto normal = rngSphere ();
         const auto point = center () + radius ()*normal;
         const auto dir = rngHemisphereVector (normal);
-        return { point.nudgePoint (normal), dir };
+        return { point.nudgePoint (dir), dir };
     }
 };
 
