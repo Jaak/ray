@@ -293,7 +293,7 @@ private: /* Methods: */
       const auto alpha_E = computeAlphaE (eyePA, eyeVertices);
 
       // One below equation 10.8
-      table<Colour> c = { NL + 1, NE + 1, { 0.0, 0.0, 0.0 } };
+      auto c = table<Colour> { NL + 1, NE + 1, { 0.0, 0.0, 0.0 } };
       auto gcache = GeometricFactorCache { *this };
 
       for (size_t t = 1; t <= NE; ++ t) {
@@ -348,7 +348,10 @@ private: /* Methods: */
               p.resize (s + t + 1, 0.0);
               p[s] = 1.0;
               if (s == 0) {
-                  p[1] = p[0] * lightPA / (generationPr (xs[1], xs[0]) * gcache (xs[1], xs[0]));
+                  const auto denom = generationPr (xs[1], xs[0]) * gcache (xs[1], xs[0]);
+                  p[1] = p[0] * lightPA / denom;
+                  if (denom == 0.0)
+                      p[1] = 0.0;
 
                   for (size_t i = s + 1; i < k; ++ i) {
                       const auto denom = gcache (xs[i + 1], xs[i]) * generationPr (xs[i + 1], xs[i]);
