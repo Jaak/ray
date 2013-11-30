@@ -300,7 +300,7 @@ void do_poly(Scene& scene, FILE* fp) {
     if (textured) {
       if (fscanf(fp, " %f %f", &x, &y) != 2)
         goto fmterr;
-      SET_COORD2(norms[vertcount], x, y);
+      SET_COORD2(UVs[vertcount], x, y);
     }
   }
 
@@ -377,6 +377,7 @@ void do_texture(Scene& scene, FILE* fp) {
   std::string texture_file = file_location + std::string(tf);
 
   current_texture = scene.textures().registerTexture(tga_reader::readTexture(texture_file));
+
 }
 
 void

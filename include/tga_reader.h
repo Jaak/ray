@@ -1,6 +1,7 @@
 #ifndef TGA_READER_H
 #define TGA_READER_H
 
+#include "common.h"
 #include "scene.h"
 #include "geometry.h"
 #include "texture.h"
@@ -32,7 +33,7 @@ namespace tga_reader {
     void MergeBytes(PIXEL *pixel, unsigned char *p, int bytes);
 
     Texture readTexture(std::string tgaFileName) {
-        //std::cout << tgaFileName << std::endl;
+
         FILE *fptr;
         if ((fptr = fopen(tgaFileName.c_str(),"r")) == NULL) {
           printf("Failed to open texture file\n");
@@ -80,7 +81,6 @@ namespace tga_reader {
         /* Skip over unnecessary stuff */
         skipover += header.idlength;
         skipover += header.colourmaptype * header.colourmaplength;
-        printf("Skip over %d bytes\n", skipover);
         fseek(fptr, skipover, SEEK_CUR);
 
         /* Read the image */
@@ -119,14 +119,25 @@ namespace tga_reader {
             }
         }
 
-        n = 0;
+        int px_idx;
         PIXEL current_pixel;
         std::vector<std::vector<Colour>> texels;
-        for (i = 0; i < header.height; ++i) {
+        floating r, g, b;
+        
+        for (i = header.height - 1; i >= 0; --i) {
             std::vector<Colour> row;
+
             for (j = 0; j < header.width; ++j) {
-                current_pixel = pixels[n];
-                row.push_back(Colour(current_pixel.r, current_pixel.g, current_pixel.b));
+                // pixels array is ordered from bottom to top, but let's read pixels from top to bottom
+                px_idx = i * header.width + j;
+                current_pixel = pixels[px_idx];
+
+                r = clamp((int)current_pixel.r / 255.0);
+                g = clamp((int)current_pixel.g / 255.0);
+                b = clamp((int)current_pixel.b / 255.0);
+
+                row.push_back(Colour(r, g, b));
+
             }
             texels.push_back(row);
         }
