@@ -2,3 +2,4 @@ build/
 config.local
 CMakeLists.txt.user
 *.swp
+.vagrant/
