@@ -8,6 +8,7 @@
 #include "sphere.h"
 #include "triangle.h"
 #include "tga_reader.h"
+#include "texture.h"
 
 #include <cstdio>
 #include <cstdlib>
@@ -17,9 +18,13 @@
 namespace /* anonymous */ {
 
 material_index_t current_material;
+texture_index_t current_texture = -1;
 
 typedef double COORD3[3];
 #define SET_COORD3(r,A,B,C)     { (r)[0] = (A); (r)[1] = (B); (r)[2] = (C); }
+
+typedef double COORD2[2];
+#define SET_COORD2(r,A,B)     { (r)[0] = (A); (r)[1] = (B); }
 
 void
 show_error(const char* s) {
@@ -193,6 +198,13 @@ void do_cone(Scene&, FILE* fp) {
 
 void do_sphere(Scene& scene, FILE* fp) {
   float x, y, z, r;
+  int textured;
+
+  textured = getc(fp);
+  if (textured != 't') {
+    ungetc(textured, fp);
+    textured = 0;
+  }
 
   if (fscanf(fp, "%f %f %f %f", &x, &y, &z, &r) != 4) {
     show_error("sphere syntax error");
@@ -201,23 +213,34 @@ void do_sphere(Scene& scene, FILE* fp) {
 
   Primitive* p = new Sphere(Point(x, y, z), r);
   p->setMaterial(current_material);
+  if (textured)
+    p->setTexture(current_texture);
   scene.addPrimitive(p);
 }
 
 void do_poly(Scene& scene, FILE* fp) {
   int ispatch;
+  int textured;
   int nverts;
   int vertcount;
   COORD3* norms;
   COORD3* verts;
+  COORD2* UVs;
   float x, y, z;
 
   norms = verts = NULL;
+  UVs = NULL;
 
   ispatch = getc(fp);
   if (ispatch != 'p') {
     ungetc(ispatch, fp);
     ispatch = 0;
+  }
+
+  textured = getc(fp);
+  if (textured != 't') {
+    ungetc(textured, fp);
+    textured = 0;
   }
 
   if (fscanf(fp, "%d", &nverts) != 1)
@@ -233,6 +256,12 @@ void do_poly(Scene& scene, FILE* fp) {
       goto memerr;
   }
 
+  if (textured) {
+    UVs = (COORD2*)malloc(nverts * sizeof(COORD2));
+    if (UVs == NULL)
+      goto memerr;
+  }
+
   /* read all the vertices into temp array */
   for (vertcount = 0; vertcount < nverts; vertcount++) {
     if (fscanf(fp, " %f %f %f", &x, &y, &z) != 3)
@@ -243,6 +272,12 @@ void do_poly(Scene& scene, FILE* fp) {
       if (fscanf(fp, " %f %f %f", &x, &y, &z) != 3)
         goto fmterr;
       SET_COORD3(norms[vertcount], x, y, z);
+    }
+
+    if (textured) {
+      if (fscanf(fp, " %f %f", &x, &y) != 2)
+        goto fmterr;
+      SET_COORD2(norms[vertcount], x, y);
     }
   }
 
@@ -264,7 +299,14 @@ void do_poly(Scene& scene, FILE* fp) {
           Vector(norms[0][0], norms[0][1], norms[0][2]),
           Vector(norms[i][0], norms[i][1], norms[i][2]),
           Vector(norms[i + 1][0], norms[i + 1][1], norms[i + 1][2]));
-    } else {
+    } 
+    else if (textured) {
+      p = new Triangle(
+          Point(verts[0][0], verts[0][1], verts[0][2], UVs[0][0], UVs[0][1]),
+          Point(verts[i][0], verts[i][1], verts[i][2], UVs[i][0], UVs[i][1]),
+          Point(verts[i + 1][0], verts[i + 1][1], verts[i + 1][2], UVs[i + 1][0], UVs[i + 1][1]));  
+    }
+    else {
       p = new Triangle(
           Point(verts[0][0], verts[0][1], verts[0][2]),
           Point(verts[i][0], verts[i][1], verts[i][2]),
@@ -272,6 +314,11 @@ void do_poly(Scene& scene, FILE* fp) {
     }
 
     p->setMaterial(current_material);
+    if (textured) {
+      if (current_texture < 0)
+        goto textureError;
+      p->setTexture(current_texture);
+    }
 
     scene.addPrimitive(p);
   }
@@ -279,6 +326,8 @@ void do_poly(Scene& scene, FILE* fp) {
   free(verts);
   if (ispatch)
     free(norms);
+  if (textured)
+    free(UVs);
 
   return;
 fmterr:
@@ -286,6 +335,9 @@ fmterr:
   exit(1);
 memerr:
   show_error("can't allocate memory for polygon or patch");
+  exit(1);
+textureError:
+  show_error("texture must be defined before trying to use one");
   exit(1);
 }
 
@@ -301,7 +353,7 @@ void do_texture(Scene& scene, FILE* fp) {
   file_location.erase(scene.getFname().find_last_of('/') + 1, std::string::npos);
   std::string texture_file = file_location + std::string(tf);
 
-  tga_reader::readTexture(texture_file, scene);
+  current_texture = scene.textures().registerTexture(tga_reader::readTexture(texture_file));
 }
 
 void

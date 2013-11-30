@@ -246,13 +246,6 @@ void Scene::addLight(const Light* l) {
 
 const std::vector<const Light*>& Scene::lights() const { return m_lights; }
 
-
-void Scene::addTexture(const Texture* t) {
-    m_textures.push_back(t);
-}
-
-const std::vector<const Texture*>& Scene::textures() const { return m_textures; }
-
 void Scene::run() {
   if (MULTISAMPLE) {
     Pixel** block;

@@ -134,6 +134,11 @@ public: /* Methods: */
   Point(floating x, floating y, floating z, floating w = 1.0)
       : Vector{ x, y, z, w } {}
 
+  Point(floating x, floating y, floating z, floating tu, floating tv, floating w = 1.0)
+      : Vector{ x, y, z, w }
+      , uv {tu, tv}
+      {}
+
   // Assume that the vector v is normalized
   Point nudgePoint(const Vector& v) const;
 
@@ -145,6 +150,13 @@ public: /* Methods: */
     os << "Point {" << p.x << "," << p.y << "," << p.z << "," << p.w << "}";
     return os;
   }
+
+public: /* Fields: */
+  // u,v coordinates for texture
+  union {
+    floating uv[2];
+    struct { floating u, v; };
+  }; 
 };
 
 inline Point operator+(const Point& p, const Vector& v) {

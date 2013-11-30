@@ -31,8 +31,8 @@ namespace tga_reader {
     void printHeader(HEADER& h);
     void MergeBytes(PIXEL *pixel, unsigned char *p, int bytes);
 
-    void readTexture(std::string tgaFileName, Scene& scene) {
-        std::cout << tgaFileName << std::endl;
+    Texture readTexture(std::string tgaFileName) {
+        //std::cout << tgaFileName << std::endl;
         FILE *fptr;
         if ((fptr = fopen(tgaFileName.c_str(),"r")) == NULL) {
           printf("Failed to open texture file\n");
@@ -45,7 +45,7 @@ namespace tga_reader {
         unsigned char p[5];
 
         getHeader(fptr, header);
-        printHeader(header);
+        //printHeader(header);
 
         if ((pixels = (PIXEL*)malloc(header.width * header.height * sizeof(PIXEL))) == NULL) {
             printf("malloc of image failed\n");
@@ -131,11 +131,10 @@ namespace tga_reader {
             texels.push_back(row);
         }
 
-        Texture t = Texture(texels);
-        scene.addTexture(&t);
-
         free(pixels);
         fclose(fptr);
+
+        return Texture(texels);
     }
 
     void getHeader(FILE* fptr, HEADER& h) {

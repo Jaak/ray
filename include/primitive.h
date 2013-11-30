@@ -3,6 +3,7 @@
 
 #include "geometry.h"
 #include "material.h"
+#include "texture.h"
 
 class Intersection;
 class Ray;
@@ -12,6 +13,7 @@ public: /* Methods: */
 
   explicit Primitive (bool is_light = false)
     : m_material (0)
+    , m_texture (-1)
     , m_is_light (is_light)
   { }
 
@@ -23,6 +25,14 @@ public: /* Methods: */
 
   material_index_t material () const {
     return m_material;
+  }
+
+  void setTexture (texture_index_t texture) {
+    m_texture = texture;
+  }
+
+  texture_index_t texture () const {
+    return m_texture;
   }
 
   /// Intersects ray with primitive on hit
@@ -49,6 +59,7 @@ public: /* Methods: */
 
 private: /* Fields: */
   material_index_t m_material; ///< Material description of the primitive
+  texture_index_t  m_texture; ///< Texture of the primitive
   const bool       m_is_light; ///< If the given primitive is emitting light.
 };
 

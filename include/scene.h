@@ -68,8 +68,8 @@ public: /* Methods: */
   const Material& background() const;
   std::string getFname();
   friend std::ostream& operator << (std::ostream&, Scene const&);
-  void addTexture (const Texture*  texture);
-  const std::vector<const Texture*>& textures() const;
+  const Textures& textures () const { return m_textures; }
+  Textures& textures () { return m_textures; }
 
 private:
   Colour trace(size_t, Pixel**, int, int, int, int, int, int, int);
@@ -82,7 +82,7 @@ protected: /* Fields: */
   std::vector<const Light* >            m_lights;        ///< Lights of the scene.
   material_index_t                      m_background;    ///< Background material.
   std::vector<std::unique_ptr<Surface>> m_surfaces;      ///< Output surfaces.
-  std::vector<const Texture*>           m_textures;
+  Textures                              m_textures;
 };
 
 #endif
