@@ -30,6 +30,8 @@ void Scene::setSceneReader(SceneReader* sr) {
   m_scene_reader = std::unique_ptr<SceneReader>(sr);
 }
 
+std::string Scene::getFname() {return (*m_scene_reader).getFname();}
+
 Scene::~Scene() {
     for (auto light : m_lights)
         delete light;
@@ -243,6 +245,13 @@ void Scene::addLight(const Light* l) {
 }
 
 const std::vector<const Light*>& Scene::lights() const { return m_lights; }
+
+
+void Scene::addTexture(const Texture* t) {
+    m_textures.push_back(t);
+}
+
+const std::vector<const Texture*>& Scene::textures() const { return m_textures; }
 
 void Scene::run() {
   if (MULTISAMPLE) {

@@ -21,6 +21,8 @@ public: /* Methods: */
 
   virtual Status init(Scene& scene) const = 0;
 
+  std::string getFname() {return m_fname;}
+
 protected:
   std::string const& fname() const { return m_fname; }
 

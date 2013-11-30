@@ -7,6 +7,7 @@
 #include "scene.h"
 #include "sphere.h"
 #include "triangle.h"
+#include "tga_reader.h"
 
 #include <cstdio>
 #include <cstdlib>
@@ -288,6 +289,21 @@ memerr:
   exit(1);
 }
 
+void do_texture(Scene& scene, FILE* fp) {
+  char tf[511];
+
+  if (fscanf(fp, " %s", tf) != 1) {
+    show_error("texture syntax error");
+    exit(1);
+  }
+  // assume texture file is in the same location as the nff file that references it
+  std::string file_location = scene.getFname();
+  file_location.erase(scene.getFname().find_last_of('/') + 1, std::string::npos);
+  std::string texture_file = file_location + std::string(tf);
+
+  tga_reader::readTexture(texture_file, scene);
+}
+
 void
 parse_nff(Scene& scene, FILE* fp)
 {
@@ -309,6 +325,7 @@ parse_nff(Scene& scene, FILE* fp)
       case 'c': do_cone(scene, fp); break;
       case 's': do_sphere(scene, fp); break;
       case 'p': do_poly(scene, fp); break;
+      case 't': do_texture(scene, fp); break;
       default:            /* unknown */
                 show_error("unknown NFF primitive code: ");
                 exit(1);
