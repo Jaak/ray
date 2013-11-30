@@ -42,7 +42,7 @@ public: /* Methods: */
   virtual Vector normal(const Point&) const = 0;
 
   /// Outputs primitive description into stream.
-  virtual void output(std::ostream&) const { };
+  // virtual void output(std::ostream&) const { };
 
   /// Least coordinate of the primitive on @a axis
   virtual floating getLeftExtreme(Axes axis) const = 0;
@@ -52,10 +52,10 @@ public: /* Methods: */
   /// Greates coordinate of the primitive on @a axis
   virtual floating getRightExtreme(Axes axis) const = 0;
 
-  friend std::ostream& operator << (std::ostream& o, const Primitive& p) {
-    p.output(o);
-    return o;
-  }
+//  friend std::ostream& operator << (std::ostream& o, const Primitive& p) {
+//    p.output(o);
+//    return o;
+//  }
 
 private: /* Fields: */
   material_index_t m_material; ///< Material description of the primitive

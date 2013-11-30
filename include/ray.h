@@ -20,7 +20,6 @@ public:
   Vector dir () const { return m_dir; }
 
   Ray reflect (const Intersection& intr) const;
-  Vector normal (const Intersection& intr) const;
 
   friend std::ostream& operator << (std::ostream& os, const Ray& r) {
     os << "Ray {" << r.origin () << "," << r.dir () << "}";

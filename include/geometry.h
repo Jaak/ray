@@ -99,6 +99,10 @@ public: /* Fields: */
 
 inline Vector normalised(Vector u) { return u.normalise(); }
 
+inline Vector normalised (floating x, floating y, floating z) {
+    return normalised (Vector {x, y, z});
+}
+
 // whatever floats your boat
 inline Vector normalized(Vector u) { return normalised(u); }
 
@@ -120,6 +124,16 @@ inline Vector operator*(const Vector& v, floating s) {
 
 inline Vector operator/(const Vector& v, floating s) {
   return v * (floating(1.0) / s);
+}
+
+inline Vector pickOrthogonal (const Vector& dir) {
+  const Vector X { 1, 0, 0 };
+  const Vector Y { 0, 1, 0 };
+  return normalised (dir.cross(fabs(dir.x) < 0.01 ? X : Y));
+}
+
+inline Vector reflect (const Vector& I, const Vector& N) {
+  return I - 2.0 * N.dot(I) * N;
 }
 
 /***********************
@@ -169,10 +183,6 @@ inline Point Point::nudgePoint(const Vector& v) const {
   return *this + ray_epsilon * v;
 }
 
-inline Vector reflect (const Vector& I, const Vector& N) {
-  return I - 2.0 * N.dot(I) * N;
-}
-
 /****************************
  * representation of colour *
  ****************************/
@@ -202,6 +212,13 @@ public: /* Methods: */
   }
 
   bool close(const Colour& c) const { return almost_zero(diff(c)); }
+
+  Colour& operator += (const Colour& c) {
+    r += c.r;
+    g += c.g;
+    b += c.b;
+    return *this;
+  }
 
   friend std::ostream& operator<<(std::ostream& os, const Colour& p) {
     os << "Colour {" << p.r << "," << p.g << "," << p.b << "}";

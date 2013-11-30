@@ -3,12 +3,16 @@
 #include "parser.h"
 #include "pixel.h"
 #include "raytracer.h"
+#include "pathtracer.h"
 #include "scene.h"
 #include "scene_reader.h"
 
 #include <boost/date_time.hpp>
 #include <boost/thread.hpp>
+#include <boost/mpl/if.hpp>
 #include <string>
+
+using Renderer = boost::mpl::if_c<BPT_ENABLED, Pathtracer, Raytracer>::type;
 
 Scene::Scene() {
     m_background = m_materials.registerMaterial (Material { Colour { 0, 0, 0 } });
@@ -59,7 +63,7 @@ Colour Scene::trace(size_t depth, Pixel** block, int w, int h, int x1, int y1,
    * Trace 4 corners of subpixel block.
    */
   if (!block[y1][x1].active()) {
-    c[0] = Raytracer (*this)(m_camera.spawnRay(h + dy[0], w + dx[0]));
+    c[0] = Renderer(*this)(m_camera.spawnRay(h + dy[0], w + dx[0]));
     block[y1][x1].activate();
     block[y1][x1].setColour(c[0]);
   } else {
@@ -67,7 +71,7 @@ Colour Scene::trace(size_t depth, Pixel** block, int w, int h, int x1, int y1,
   }
 
   if (!block[y2][x1].active()) {
-    c[1] = Raytracer (*this)(m_camera.spawnRay(h + dy[1], w + dx[0]));
+    c[1] = Renderer(*this)(m_camera.spawnRay(h + dy[1], w + dx[0]));
     block[y2][x1].activate();
     block[y2][x1].setColour(c[1]);
   } else {
@@ -75,7 +79,7 @@ Colour Scene::trace(size_t depth, Pixel** block, int w, int h, int x1, int y1,
   }
 
   if (!block[y1][x2].active()) {
-    c[2] = Raytracer (*this)(m_camera.spawnRay(h + dy[0], w + dx[1]));
+    c[2] = Renderer(*this)(m_camera.spawnRay(h + dy[0], w + dx[1]));
     block[y1][x2].activate();
     block[y1][x2].setColour(c[2]);
   } else {
@@ -83,7 +87,7 @@ Colour Scene::trace(size_t depth, Pixel** block, int w, int h, int x1, int y1,
   }
 
   if (!block[y2][x2].active()) {
-    c[3] = Raytracer (*this)(m_camera.spawnRay(h + dy[1], w + dx[1]));
+    c[3] = Renderer(*this)(m_camera.spawnRay(h + dy[1], w + dx[1]));
     block[y2][x2].activate();
     block[y2][x2].setColour(c[3]);
   } else {
@@ -127,7 +131,21 @@ public: /* Methods: */
   { }
 
   void renderRough(Scene& scene) const {
-    const auto c = Raytracer(scene)(scene.m_camera.spawnRay(m_y0, m_x0));
+    Renderer rt { scene };
+    auto c = Colour { 0.0, 0.0, 0.0 };
+    if (BPT_ENABLED) {
+      for (size_t sample = 0; sample < BPT_SAMPLES; ++ sample) {
+        const auto dh = rng () - 0.5;
+        const auto dw = rng () - 0.5;
+        c += rt(scene.m_camera.spawnRay(m_y0 + dh, m_x0 + dw));
+      }
+
+      c = c / BPT_SAMPLES;
+    }
+    else {
+      c = rt(scene.m_camera.spawnRay(m_y0, m_x0));
+    }
+
     for (auto& surface : scene.surfaces()) {
       for (int h = m_y0; h < m_y1; ++h) {
         for (int w = m_x0; w < m_x1; ++w) {
@@ -138,15 +156,15 @@ public: /* Methods: */
   }
 
   void renderNice(Scene& scene) const {
-    Raytracer rt { scene };
+    Renderer rt { scene };
     for (auto& surface : scene.surfaces()) {
       for (int h = m_y0; h < m_y1; ++h) {
         for (int w = m_x0; w < m_x1; ++w) {
           if (BPT_ENABLED) {
             auto col = Colour { 0.0, 0.0, 0.0 };
             for (size_t sample = 0; sample < BPT_SAMPLES; ++ sample) {
-              const floating dh = rng () - 0.5;
-              const floating dw = rng () - 0.5;
+              const auto dh = rng () - 0.5;
+              const auto dw = rng () - 0.5;
               const auto c = rt(scene.m_camera.spawnRay(h + dh, w + dw));
               col += c;
             }

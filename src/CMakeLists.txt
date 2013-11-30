@@ -18,8 +18,10 @@ set(RAY_INCLUDE_DIR "${CMAKE_SOURCE_DIR}/include/")
 set(INCLUDEFILES
   "${RAY_INCLUDE_DIR}/aabb.h"
   "${RAY_INCLUDE_DIR}/area_light.h"
+  "${RAY_INCLUDE_DIR}/brdf.h"
   "${RAY_INCLUDE_DIR}/camera.h"
   "${RAY_INCLUDE_DIR}/common.h"
+  "${RAY_INCLUDE_DIR}/frame.h"
   "${RAY_INCLUDE_DIR}/geometry.h"
   "${RAY_INCLUDE_DIR}/intersection.h"
   "${RAY_INCLUDE_DIR}/itriangle.h"
@@ -30,6 +32,7 @@ set(INCLUDEFILES
   "${RAY_INCLUDE_DIR}/naive_primitive_manager.h"
   "${RAY_INCLUDE_DIR}/nff_scene_reader.h"
   "${RAY_INCLUDE_DIR}/parser.h"
+  "${RAY_INCLUDE_DIR}/pathtracer.h"
   "${RAY_INCLUDE_DIR}/pixel.h"
   "${RAY_INCLUDE_DIR}/png_surface.h"
   "${RAY_INCLUDE_DIR}/point_light.h"
@@ -44,8 +47,10 @@ set(INCLUDEFILES
   "${RAY_INCLUDE_DIR}/sdl_surface.h"
   "${RAY_INCLUDE_DIR}/sphere.h"
   "${RAY_INCLUDE_DIR}/surface.h"
+  "${RAY_INCLUDE_DIR}/table.h"
   "${RAY_INCLUDE_DIR}/tga_surface.h"
   "${RAY_INCLUDE_DIR}/triangle.h"
+  "${RAY_INCLUDE_DIR}/vertex.h"
 )
 
 IF(GD_FOUND)

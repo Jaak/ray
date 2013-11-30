@@ -27,6 +27,8 @@ public: /* Methods: */
    */
   virtual Ray sample() const = 0;
 
+  virtual floating lightPA () const = 0;
+
 private: /* Fields: */
   Colour m_colour; ///< Colour of the light
 };

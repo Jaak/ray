@@ -3,22 +3,18 @@
 #include "primitive.h"
 #include "intersection.h"
 
+#include <cassert>
+
 Ray Ray::reflect(const Intersection& intr) const {
-  const Point P = intr.point();
-  const Vector V = m_dir;
-  Vector N = normal(intr);
-  if (intr.type() == Intersection::Type::INTERNAL) {
+    assert (intr.getPrimitive ());
+  const auto P = intr.point();
+  auto N = intr.getPrimitive ()->normal (P);
+  const auto V = m_dir;
+  const auto internal = V.dot(N) < 0.0;
+  if (internal) {
     N = -N;
   }
 
-  const Vector R = normalised(V - (2 * V.dot(N)) * N);
+  const auto R = normalised(V - (2 * V.dot(N)) * N);
   return { P + R * ray_epsilon, R };
-}
-
-Vector Ray::normal(const Intersection& intr) const {
-  if (!intr.hasIntersections()) {
-    return { 0, 0, 0 };
-  }
-
-  return intr.getPrimitive()->normal(intr.point());
 }

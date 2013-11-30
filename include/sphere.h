@@ -42,10 +42,8 @@ public: /* Methods: */
     }
 
     d = std::sqrt(d);
-    const Intersection::Type type =
-        q < 0 ? Intersection::Type::INTERNAL : Intersection::Type::EXTERNAL;
-    intr.update (ray, this, -p + d, type);
-    intr.update (ray, this, -p - d, type);
+    intr.update (ray, this, -p + d);
+    intr.update (ray, this, -p - d);
   }
 
   floating getLeftExtreme(Axes axis) const {
@@ -63,7 +61,7 @@ public: /* Methods: */
     o << '}';
   }
 
-private: /* Fields: */
+protected: /* Fields: */
   const Point    m_center;    ///< Center of the sphere
   const floating m_radius;    ///< Radius of the sphere
   const floating m_sqrradius; ///< Square of the spheres radius

@@ -18,7 +18,7 @@ NaivePrimitiveManager::~NaivePrimitiveManager() {
 
 Intersection NaivePrimitiveManager::intersectWithPrims(const Ray& ray) const {
   Intersection intr;
-  for (Primitive* p : m_prims) {
+  for (auto p : m_prims) {
     ++icount;
     p->intersect(ray, intr);
   }

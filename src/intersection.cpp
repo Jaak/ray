@@ -2,13 +2,11 @@
 #include "primitive.h"
 #include "ray.h"
 
-void Intersection::update(const Ray& ray, const Primitive* prim, floating dist,
-                          Intersection::Type type) {
+void Intersection::update(const Ray& ray, const Primitive* prim, floating dist) {
   if (dist > 0.0 && (!hasIntersections() || dist < this->dist())) {
-    setPrimitive(prim);
-    setDist(dist);
-    setPoint(ray.origin() + dist * ray.dir());
-    setType(type);
+      m_primitive = prim;
+      m_dist = dist;
+      m_point = ray.origin() + dist * ray.dir();
   }
 }
 
@@ -17,11 +15,11 @@ std::ostream& operator<<(std::ostream& os, const Intersection& i) {
   os << "point = " << i.m_point << ',';
   os << "dist = " << i.m_dist << ',';
   os << "primitive = ";
-  if (i.m_primitive != nullptr) {
-    os << *i.m_primitive;
-  } else {
-    os << "nullptr";
-  }
+//  if (i.m_primitive != nullptr) {
+//    os << *i.m_primitive;
+//  } else {
+//    os << "nullptr";
+//  }
   os << '}';
   return os;
 }
