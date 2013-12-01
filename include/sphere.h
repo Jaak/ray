@@ -54,6 +54,14 @@ public: /* Methods: */
     return m_center[axis] + m_radius;
   }
 
+  const Colour getColourAtIntersection(const Point& point, const Texture* texture) const {
+    floating u, v;
+    Vector N = this->normal(point);
+    u = 0.5 + atan2(N.z, N.x) / (2 * M_PI);
+    v = 0.5 - asin(N.y) / M_PI;
+    return texture->getTexel(u, v);
+  }
+
   void output(std::ostream& o) const {
     o << "Sphere {";
     o << "center = " << m_center << ',';
