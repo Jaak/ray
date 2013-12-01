@@ -52,6 +52,33 @@ public: /* Methods: */
     return fmax(fmax(m_point[0][axis], m_point[1][axis]), m_point[2][axis]);
   }
 
+  const Colour getColourAtIntersection(const Point& point, const Texture* texture) const {
+    // http://gamedev.stackexchange.com/a/23745
+
+    // barycentric coords of the triangle
+    floating bu, bv, bw;
+
+    // texture coords
+    floating tu, tv;
+
+    Vector v0 = m_point[1] - m_point[0];
+    Vector v1 = m_point[2] - m_point[0];
+    Vector v2 = point - m_point[0];
+    floating d00 = v0.dot(v0);
+    floating d01 = v0.dot(v1);
+    floating d11 = v1.dot(v1);
+    floating d20 = v2.dot(v0);
+    floating d21 = v2.dot(v1);
+    floating denom =  d00 * d11 - d01 * d01;
+    bv = (d11 * d20 - d01 * d21) / denom;
+    bw = (d00 * d21 - d01 * d20) / denom;
+    bu = 1.0 - bv - bw;
+    tu = bu * m_point[0].u + bv * m_point[1].u + bw * m_point[2].u;
+    tv = bu * m_point[0].v + bv * m_point[1].v + bw * m_point[2].v;
+    
+    return texture->getTexel(tu, tv);
+  }
+
   void output(std::ostream& o) const {
     o << "Triangle {";
     o << m_point[0] << ',';

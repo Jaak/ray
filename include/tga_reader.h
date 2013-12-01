@@ -119,25 +119,23 @@ namespace tga_reader {
             }
         }
 
-        int px_idx;
+        int px_idx = 0;
         PIXEL current_pixel;
         std::vector<std::vector<Colour>> texels;
         floating r, g, b;
         
-        for (i = header.height - 1; i >= 0; --i) {
+        for (i = 0; i < header.height; ++i) {
             std::vector<Colour> row;
 
             for (j = 0; j < header.width; ++j) {
-                // pixels array is ordered from bottom to top, but let's read pixels from top to bottom
-                px_idx = i * header.width + j;
                 current_pixel = pixels[px_idx];
 
-                r = clamp((int)current_pixel.r / 255.0);
-                g = clamp((int)current_pixel.g / 255.0);
-                b = clamp((int)current_pixel.b / 255.0);
+                r = (int)current_pixel.r / 255.0;
+                g = (int)current_pixel.g / 255.0;
+                b = (int)current_pixel.b / 255.0;
 
                 row.push_back(Colour(r, g, b));
-
+                px_idx++;
             }
             texels.push_back(row);
         }
@@ -145,7 +143,7 @@ namespace tga_reader {
         free(pixels);
         fclose(fptr);
 
-        return Texture(texels);
+        return Texture(texels, header.width, header.height);
     }
 
     void getHeader(FILE* fptr, HEADER& h) {

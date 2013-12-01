@@ -97,7 +97,16 @@ private: /* Methods: */
       const auto R = reflect (L, N);
       const auto diff = m.kd () * clamp (L.dot(N), 0, 1);
       const auto spec = m.ks () * pow(clamp(V.dot(R), 0, 1), m.phong_pow());
-      col += (diff + spec) * m.colour() * l->colour();
+      //col += (diff + spec) * m.colour() * l->colour();
+      
+      if (prim->texture() >= 0) {
+        const Texture* texture = m_scene.textures()[prim->texture()];
+        col += (diff + spec) * prim->getColourAtIntersection(point, texture) * l->colour();
+      }
+      else {
+        col += (diff + spec) * m.colour() * l->colour();
+      }
+
     }
 
     // reflection

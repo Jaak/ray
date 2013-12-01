@@ -19,6 +19,8 @@ public: /* Methods: */
 
   virtual ~Primitive() { }
 
+  const virtual Colour getColourAtIntersection(const Point&, const Texture*) const {}
+
   void setMaterial (material_index_t mat) {
     m_material = mat;
   }
