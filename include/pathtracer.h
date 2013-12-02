@@ -237,7 +237,7 @@ private: /* Methods: */
 
     }   break;
     case EYE:
-        assert (false && "No support for refraction in path tracer yet!");
+        assert (false && "No support for ray camera-lens intersections!");
         break;
     }
   }
@@ -246,7 +246,6 @@ private: /* Methods: */
       floating eyePA, lightPA;
       const auto evs = traceEye (ray, eyePA);
       const auto lvs = traceLight (lightPA);
-      // std::cerr << eyePA << ", " << lightPA << std::endl;
       return radiance (eyePA, std::move (evs), lightPA, std::move (lvs));
   }
 
@@ -286,7 +285,7 @@ private: /* Methods: */
       return m_scene.materials ()[prim->material ()];
   }
 
-  Colour radiance (floating lightPA, const VertexList& eyeVertices, floating eyePA, const VertexList& lightVertices) {
+  Colour radiance (floating eyePA, const VertexList& eyeVertices, floating lightPA, const VertexList& lightVertices) {
       const auto NE = eyeVertices.size ();
       const auto NL = lightVertices.size ();
       const auto alpha_L = computeAlphaL (lightPA, lightVertices);
@@ -398,7 +397,7 @@ private: /* Methods: */
 
               floating sum = 0.0;
               for (auto x : p) sum += x*x;
-              w (s, t) = fabs (sum) < epsilon ? 0.0 : 1.0 / sum;
+              w (s, t) = fabs (sum) <= 0.0 ? 0.0 : 1.0 / sum;
           }
       }
 
