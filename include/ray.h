@@ -27,8 +27,8 @@ public:
   }
 
 private: /* Fields: */
-  const Point  m_origin;
-  const Vector m_dir;
+  Point  m_origin;
+  Vector m_dir;
 };
 
 #endif

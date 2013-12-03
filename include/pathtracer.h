@@ -150,96 +150,89 @@ public: /* Methods: */
 
 private: /* Methods: */
 
-  void trace (const Ray& ray, size_t depth, floating iior, VertexList& vertices) {
-    const auto intr = intersectWithPrims (ray);
+  void trace (Ray ray, VertexList& vertices) {
+      size_t depth = 1;
+      while (true) {
+          const auto intr = intersectWithPrims (ray);
+          if (! intr.hasIntersections ()) {
+              return;
+          }
 
-    if (! intr.hasIntersections ()) {
-        return;
-    }
+          const auto prim = intr.getPrimitive ();
+          const auto m = m_scene.materials ()[prim->material()];
+          const auto objCol = m.colour();
+          const auto point = intr.point();
+          const auto V = ray.dir();
+          const auto N = prim->normal (point);
+          const auto internal = V.dot(N) > 0.0;
+          const auto into = ! internal;
+          const auto N2 = internal ? -N : N;
+          floating pr = luminance (objCol);
 
-    const auto prim = intr.getPrimitive ();
-    const auto m = m_scene.materials ()[prim->material()];
-    const auto objCol = m.colour();
-    const auto point = intr.point();
-    const auto V = ray.dir();
-    const auto N = prim->normal (point);
-    const auto internal = V.dot(N) > 0.0;
-    const auto into = ! internal;
-    const auto N2 = internal ? -N : N;
+          if (depth > RAY_MAX_REC_DEPTH) {
+              if (pr <= rng ()) {
+                  vertices.emplace_back (point, N, Colour { 0.0, 0.0, 0.0 }, prim, 0.0, DIFFUSE);
+                  return;
+              }
+          }
+          else {
+              pr = 1.0;
+          }
 
-    floating pr = std::max (objCol.r, std::max (objCol.g, objCol.b));
+          switch (getEventType (m)) {
+          case LIGHT:
+              vertices.emplace_back (point, N, objCol / M_PI, prim, pr / M_PI, LIGHT);
+              return;
+          case DIFFUSE: {
+              const auto dir = rngHemisphereVector (N);
+              vertices.emplace_back (point, N, objCol / M_PI, prim, pr / M_PI, DIFFUSE);
+              ray = shootRay (point, dir);
+              break;
+          }
+          case REFLECT: {
+              const auto dir = reflect (V, N);
+              vertices.emplace_back (point, N, objCol, prim, pr, REFLECT);
+              ray = shootRay (point, dir);
+              break;
+          }
+          case REFRACT: {
+              floating n1 = 1.0, n2 = m.ior();
+              if (internal)
+                  std::swap (n1, n2);
+              const auto n = n1 / n2;
+              const auto cosT1 = V.dot(N2);
+              const auto cosT2 = 1.0 - n * n * (1.0 - cosT1 * cosT1);
+              if (cosT2 < 0.0) {
+                  const auto reflDir = reflect (V, N);
+                  vertices.emplace_back(point, N2, objCol, prim, pr, REFLECT);
+                  ray = shootRay (point, reflDir);
+                  break;
+              }
 
-    // If some recursion depth is exeeded terminate with some probability
-    if (depth > RAY_MAX_REC_DEPTH) {
-        if (pr <= rng ()) {
-            vertices.emplace_back (point, N, Colour { 0.0, 0.0, 0.0 }, prim, 0.0, DIFFUSE);
-            return;
-        }
-    }
-    else {
-        pr = 1.0;
-    }
+              const auto T = normalised (n * V - (into ? 1.0 : -1.0) * N * (n * cosT1 + sqrt (cosT2)));
+              const auto Re = fresnel (- cosT1, n1, n2);
+              const auto Tr = 1.0 - Re;
+              if (rng () < Re) {
+                  const auto reflDir = reflect (V, N);
+                  vertices.emplace_back(point, N, Re*objCol, prim, pr*Re, REFLECT);
+                  ray = shootRay (point, reflDir);
+                  break;
+              }
+              else {
+                  vertices.emplace_back(point, -N, Tr*objCol, prim, pr*Tr, REFRACT);
+                  ray = shootRay (point, T);
+                  break;
+              }
 
-    switch (getEventType (m)) {
-    case LIGHT:
-        vertices.emplace_back (point, N, objCol / M_PI, prim, pr / M_PI, LIGHT);
-        break;
-    case DIFFUSE: {
-        const auto dir = rngHemisphereVector (N);
-        const auto R = Ray { point.nudgePoint (dir), dir };
-        vertices.emplace_back (point, N, objCol / M_PI, prim, pr / M_PI, DIFFUSE);
-        trace (R, depth + 1, iior, vertices);
-    }   break;
-    case REFLECT: {
-        const auto dir = reflect (V, N);
-        const auto R = Ray { point.nudgePoint (dir), dir };
-        vertices.emplace_back (point, N, objCol, prim, pr, REFLECT);
-        trace (R, depth + 1, iior, vertices);
-    }   break;
-    case REFRACT: {
-        // TODO: doesn't seem to be working yet...
-        floating n1 = iior, n2 = m.ior();
-        const auto n = into ? n1 / n2 : n2 / n1;
-        const auto cosT1 = V.dot(N2);
-        const auto cosT2 = 1.0 - n * n * (1.0 - cosT1 * cosT1);
-        if (cosT2 < 0.0) {
-            const auto reflDir = reflect (V, N);
-            const auto R = Ray { point.nudgePoint (reflDir), reflDir };
-            vertices.emplace_back(point, N2, objCol, prim, pr, REFLECT);
-            trace (R, depth+1, iior, vertices);
-            break;
-        }
+              break;
+          }
+          case EYE:
+              assert (false && "No support for ray camera-lens intersections!");
+              break;
+          }
 
-        const auto T = normalised (n * V - (into ? 1.0 : -1.0) * N * (n * cosT1 + sqrt (cosT2)));
-        vertices.emplace_back(point, - N2, objCol, prim, pr, REFRACT);
-        const auto R = Ray { point.nudgePoint (T), T };
-        trace (R, depth+1, into ? n2 : n1, vertices);
-
-//        const auto a = into ? n2 - n1 : n1 - n2;
-//        const auto b = n1 + n2;
-//        const auto R0 = (a * a) / (b * b);
-//        const auto c = 1.0 - (into ? - cosT1 : T.dot(N));
-//        const auto Re = R0 + (1.0 - R0) * pow (c, 5.0);
-//        const auto Tr = 1.0 - Re;
-//        const auto prob = 0.25 + 0.5 * Re;
-//        if (rng () < prob) {
-//            vertices.emplace_back(point, N, Re*objCol, prim, pr*prob, REFLECT);
-//            const auto R = Ray { point.nudgePoint (reflDir), reflDir };
-//            trace (R, depth+1, iior, vertices);
-//            break;
-//        }
-//        else {
-//            vertices.emplace_back(point, -N, Tr*objCol, prim, pr*(1.0 - prob), REFRACT);
-//            const auto R = Ray { point.nudgePoint (T), T };
-//            trace (R, depth+1, n2, vertices);
-//            break;
-//        }
-
-    }   break;
-    case EYE:
-        assert (false && "No support for ray camera-lens intersections!");
-        break;
-    }
+          ++ depth;
+      }
   }
 
   Colour run (const Ray& ray) {
@@ -254,7 +247,7 @@ private: /* Methods: */
       VertexList vertices;
       vertices.reserve (RAY_MAX_REC_DEPTH);
       eyePA = 1.0;
-      trace (R, 1, 1.0, vertices);
+      trace (R, vertices);
       return std::move (vertices);
   }
 
@@ -262,7 +255,7 @@ private: /* Methods: */
   VertexList traceLight (floating& lightPA) {
       assert (! m_scene.lights ().empty ());
       const auto nLights = m_scene.lights ().size ();
-      const floating lightPr = 1.0 / (floating) nLights;
+//      const floating lightPr = 1.0 / (floating) nLights;
       const auto light = m_scene.lights ()[nLights - 1];
       const auto R = light->sample ();
       const auto N = light->prim()->normal(R.origin ());
@@ -275,7 +268,7 @@ private: /* Methods: */
         1.0 / (2.0 * M_PI * N.dot (R.dir ())),
         LIGHT
       );
-      trace (R, 1, lightPr, vertices);
+      trace (R, vertices);
       return std::move (vertices);
   }
 

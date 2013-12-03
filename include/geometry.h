@@ -250,4 +250,8 @@ inline Colour expf(const Colour& c) {
   return { expf(c.r), expf(c.g), expf(c.b) };
 }
 
+inline floating luminance (const Colour& c) {
+    return 0.2126*c.r + 0.7152*c.g + 0.0722*c.b;
+}
+
 #endif
