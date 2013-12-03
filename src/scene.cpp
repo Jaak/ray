@@ -179,19 +179,30 @@ public: /* Methods: */
     }
   }
 
-  bool subdivide(std::vector<Block>& blocks) const {
-    if ((m_y1 - m_y0) * (m_x1 - m_x0) < 2) {
-      return false;
-    }
+  size_t area () const {
+      return (m_y1 - m_y0) * (m_x1 - m_x0);
+  }
 
-    int ym = m_y0 + (m_y1 - m_y0) / 2;
-    int xm = m_x0 + (m_x1 - m_x0) / 2;
+  void subdiv (size_t numPixels, std::vector<Block>& blocks, size_t rot = 0) {
+      if (area () <= numPixels) {
+          blocks.emplace_back (m_y0, m_y1, m_x0, m_x1);
+          return;
+      }
 
-    blocks.emplace_back(m_y0, ym, m_x0, xm);
-    blocks.emplace_back(ym, m_y1, m_x0, xm);
-    blocks.emplace_back(m_y0, ym, xm, m_x1);
-    blocks.emplace_back(ym, m_y1, xm, m_x1);
-    return true;
+      const auto ym = m_y0 + (m_y1 - m_y0) / 2;
+      const auto xm = m_x0 + (m_x1 - m_x0) / 2;
+      Block bs [4] {
+          { m_y0, ym, m_x0, xm } // top-left
+        , { ym, m_y1, m_x0, xm } // bottom-left
+        , { ym, m_y1, xm, m_x1 } // bottom-right
+        , { m_y0, ym, xm, m_x1 } // top-right
+      };
+
+      for (size_t i = 0; i < 4; ++ i) {
+          const auto j = (rot + i) % 4;
+          const auto newRot = (j + 2) % 4;
+          bs[j].subdiv (numPixels, blocks, newRot);
+      }
   }
 
 private: /* Fields: */
@@ -233,17 +244,6 @@ private: /* Fields: */
   Scene&               m_scene;
   const TaskType       m_type;
 };
-
-void swap(std::vector<Block>& front, std::vector<Block>& back) {
-  back.clear();
-
-  for (auto& block : front) {
-    block.subdivide(back);
-  }
-
-  front.clear();
-  std::swap(front, back);
-}
 
 void Scene::init() {
   m_scene_reader->init(*this);
@@ -343,29 +343,27 @@ void Scene::run() {
 
     std::cout << "Running on " << nP << " threads..." << std::endl;
 
-    std::vector<Block> front, back;
-
-    front.emplace_back(0, m_camera.height(), 0, m_camera.width());
-
-    for (size_t i = 0; i < 6; ++i)
-      swap(front, back);
+    Block entireScreen { 0, m_camera.height(), 0, m_camera.width() };
+    std::vector<Block> blocks; // , back;
+    entireScreen.subdiv (32 * 32, blocks);
 
     { // first we render a rough scene
       boost::thread_group threads;
       for (size_t i = 0; i < nP; ++i) {
-        threads.create_thread(Task(i, nP, front, *this, Rough));
+        threads.create_thread(Task(i, nP, blocks, *this, Rough));
       }
 
       threads.join_all();
       std::cout << "Rough done..." << std::endl;
     }
 
-    swap(front, back);
+    blocks.clear ();
+    entireScreen.subdiv (16 * 16, blocks);
 
     { // render good scene
       boost::thread_group threads;
       for (size_t i = 0; i < nP; ++i) {
-        threads.create_thread(Task(i, nP, front, *this, Nice));
+        threads.create_thread(Task(i, nP, blocks, *this, Nice));
       }
 
       threads.join_all();
