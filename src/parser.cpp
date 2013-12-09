@@ -4,6 +4,7 @@
 #include "itriangle.h"
 #include "material.h"
 #include "point_light.h"
+#include "spotlight.h"
 #include "scene.h"
 #include "sphere.h"
 #include "triangle.h"
@@ -149,6 +150,25 @@ void do_area_light (Scene& scene, FILE* fp) {
     scene.addLight (light);
 }
 
+void do_spotlight (Scene& scene, FILE* fp) {
+    float x, y, z, sr, dx, dy, dz, a, r = 1.0, g = 1.0, b = 1.0;
+    const auto n = fscanf(fp, "%f %f %f %f %f %f %f %f %f %f %f",
+      &x, &y, &z, &sr, &dx, &dy, &dz, &a, &r, &g, &b);
+    if (n != 11 && n != 8) {
+        show_error ("Spotlight source syntax error");
+        exit (1);
+    }
+
+    auto light = new Spotlight {
+      Point { x, y, z},
+      sr,
+      Vector { dx, dy, dz },
+      a,
+      Colour { r, g, b }
+    };
+    scene.addLight (light);
+}
+
 void do_light(Scene& scene, FILE* fp) {
 
   const auto c = getc(fp);
@@ -160,6 +180,12 @@ void do_light(Scene& scene, FILE* fp) {
 
   if (c == 'a') {
     do_area_light (scene, fp);
+    return;
+  }
+
+  // since 's' is taken let's use 'f' for flashlight as an alternative name for spotlight
+  if (c == 'f') {
+    do_spotlight (scene, fp);
     return;
   }
   
@@ -327,7 +353,7 @@ void do_poly(Scene& scene, FILE* fp) {
       p = new Triangle(
           Point(verts[0][0], verts[0][1], verts[0][2], UVs[0][0], UVs[0][1]),
           Point(verts[i][0], verts[i][1], verts[i][2], UVs[i][0], UVs[i][1]),
-          Point(verts[i + 1][0], verts[i + 1][1], verts[i + 1][2], UVs[i + 1][0], UVs[i + 1][1]));  
+          Point(verts[i + 1][0], verts[i + 1][1], verts[i + 1][2], UVs[i + 1][0], UVs[i + 1][1]));
     }
     else {
       p = new Triangle(
@@ -377,7 +403,6 @@ void do_texture(Scene& scene, FILE* fp) {
   std::string texture_file = file_location + std::string(tf);
 
   current_texture = scene.textures().registerTexture(tga_reader::readTexture(texture_file));
-
 }
 
 void
