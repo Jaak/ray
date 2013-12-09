@@ -17,11 +17,11 @@ public: /* Methods: */
   std::vector<std::vector<Colour>> texels() const {return m_texels;}
 
   const Colour getTexel(floating u, floating v) const {
-    int x = clamp(u * m_width, 0.0, m_width - 1);
-    int y = clamp(v * m_height, 0.0, m_height - 1);
+    int x = clamp(round(u * m_width), 0.0, m_width - 1);
+    int y = clamp(round(v * m_height), 0.0, m_height - 1);
+
     return m_texels[y][x];
-  }
-  
+  }  
 
 private: /* Fields: */
   std::vector<std::vector<Colour>> m_texels;
