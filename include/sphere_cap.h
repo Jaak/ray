@@ -32,9 +32,7 @@ public: /* Methods: */
     }
 
     // angle between ray and cap direction
-    floating a = acos((-1*ray.dir()).dot(m_direction) / ray.dir().length()) * 180.0 / M_PI;
-
-    // ray intersects the sphere, but not the cap
+    floating a = getAngle(-ray.dir(), m_direction);
     if (a > m_angle) {
       return;
     }

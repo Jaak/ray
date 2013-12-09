@@ -21,22 +21,40 @@ public: /* Methods: */
 
   const Primitive* prim () const { return this; }
 
+
+
+
   Ray sample () const {
-    const auto point = center () + radius ()*m_direction;
+    
+    auto H = Vector {0, 0, 0};
+    while (true) {
+      H = rngHemisphere ();
+      //printf("H.z=%f\n", H.z);
+      if (H.z <= cos (m_angle * (M_PI / 180.0)))
+        break;
+    }
+
+    const auto D = Frame { m_direction }.toWorld (H);
+    const auto P = center () + radius () * D;
+    
+    //printf("m_angle %f\n", m_angle);
+    //printf("angle %f\n", getAngle(D, m_direction));
+    //printf("nAngle %f\n", getAngleN(D, m_direction));
+
+    return {P.nudgePoint (P), D};
+
+    /*
     // TODO - need a better way to get a random ray in the right direction
     while (true) {
-      const auto dir = rngHemisphereVector(m_direction);
+      //const auto dir = rngHemisphereVector(m_direction);
+      const auto dir = rngSphere();
       // angle between dir and m_direction
-      floating a = acos(m_direction.dot(dir) / dir.length()) * 180.0 / M_PI;
-      /*std::cout << "point: " << point << std::endl;
-      std::cout << "m_direction: " << m_direction << std::endl;
-      std::cout << "dir: " << dir << std::endl;
-      std::cout << "m_angle: " << m_angle << std::endl;
-      std::cout << "a: " << a << std::endl;*/
+      floating a = getAngleN(m_direction, dir);
       if (a < m_angle) {
         return {point.nudgePoint (dir), dir};
       }
-    }   
+    } */ 
+
   }
 
   floating lightPA () const {
