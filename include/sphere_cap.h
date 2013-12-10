@@ -18,7 +18,7 @@ public: /* Methods: */
   SphereCap(const Point& c, floating r, const Vector& d, floating a, bool is_light = false)
     : Sphere (c, r, is_light)
     , m_direction(normalised(d))
-    , m_angle(a)
+    , m_angle(a * M_PI / 180.0)
   { }
 
   void intersect(const Ray& ray, Intersection& intr) const {

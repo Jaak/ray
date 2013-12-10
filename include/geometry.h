@@ -136,14 +136,14 @@ inline Vector reflect (const Vector& I, const Vector& N) {
   return I - 2.0 * N.dot(I) * N;
 }
 
-// angle between two vectors in degrees
+// angle between two vectors in radians
 inline floating getAngle (const Vector& v1, const Vector& v2) {
-  return acos(v1.dot(v2) / (v1.length() * v2.length())) * 180.0 / M_PI;
+  return acos(v1.dot(v2) / (v1.length() * v2.length()));
 }
 
-// angle between two normalised vectors in degrees
+// angle between two normalised vectors in radians
 inline floating getAngleN (const Vector& v1, const Vector v2) {
-  return acos(v1.dot(v2)) * 180.0 / M_PI;
+  return acos(v1.dot(v2));
 }
 
 /***********************

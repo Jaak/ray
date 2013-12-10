@@ -29,7 +29,7 @@ public: /* Methods: */
     auto H = Vector {0, 0, 0};
     while (true) {
       H = rngHemisphere ();
-      if (H.z >= cos (m_angle * (M_PI / 180.0)))
+      if (H.z >= cos (m_angle))
         break;
     }
 
@@ -40,7 +40,9 @@ public: /* Methods: */
   }
 
   floating lightPA () const {
-      return 1.0;
+    floating h = m_radius * (1.0 - cos(m_angle));
+    floating area = 2 * M_PI * m_radius * h;
+    return 1.0 / area;
   }
 
 };
