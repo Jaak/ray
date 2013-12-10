@@ -121,12 +121,10 @@ namespace tga_reader {
 
         int px_idx = 0;
         PIXEL current_pixel;
-        std::vector<std::vector<Colour>> texels;
+        Texture texels (header.width, header.height);
         floating r, g, b;
         
         for (i = 0; i < header.height; ++i) {
-            std::vector<Colour> row;
-
             for (j = 0; j < header.width; ++j) {
                 current_pixel = pixels[px_idx];
 
@@ -134,16 +132,15 @@ namespace tga_reader {
                 g = (int)current_pixel.g / 255.0;
                 b = (int)current_pixel.b / 255.0;
 
-                row.push_back(Colour(r, g, b));
+                texels(j, i) = Colour { r, g, b};
                 px_idx++;
             }
-            texels.push_back(row);
         }
 
         free(pixels);
         fclose(fptr);
 
-        return Texture(texels, header.width, header.height);
+        return texels;
     }
 
     void getHeader(FILE* fptr, HEADER& h) {

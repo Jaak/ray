@@ -15,6 +15,9 @@ public: /* Methods: */
         , m_height { height }
     { }
 
+    size_t height () const { return m_height; }
+    size_t width () const { return m_width; }
+
     T& operator () (size_t i, size_t j) {
         assert (i < m_width && j < m_height);
         return (*this)[i*m_height + j];
