@@ -139,6 +139,10 @@ class MeshObject:
     if len(self.Mesh.materials) == 0 or not self.Config.ExportMaterials:
       self.__WriteMeshOnly() 
       return
+    if not self.Mesh.uv_textures:
+      self.Config.ExportUVCoordinates = False
+      self.__WriteMeshWithMaterial()
+      return
 
     id = 0
     for Material in self.Mesh.materials:
@@ -147,7 +151,7 @@ class MeshObject:
         self.__WriteMeshWithMaterial()
         return
       self.__WriteMaterial(Material)
-      self.Exporter.File.write("t %s\n" % (tex.image.name))
+      self.Exporter.File.write("t %s\n" % (tex.image.filepath))
       
       for Polygon in self.Mesh.polygons:
         if Polygon.material_index == id:
