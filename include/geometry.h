@@ -136,14 +136,14 @@ inline Vector reflect (const Vector& I, const Vector& N) {
   return I - 2.0 * N.dot(I) * N;
 }
 
-// angle between two vectors in degrees
+// angle between two vectors in radians
 inline floating getAngle (const Vector& v1, const Vector& v2) {
-  return acos(v1.dot(v2) / (v1.length() * v2.length())) * 180.0 / M_PI;
+  return acos(v1.dot(v2) / (v1.length() * v2.length()));
 }
 
-// angle between two normalised vectors in degrees
+// angle between two normalised vectors in radians
 inline floating getAngleN (const Vector& v1, const Vector v2) {
-  return acos(v1.dot(v2)) * 180.0 / M_PI;
+  return acos(v1.dot(v2));
 }
 
 /***********************
@@ -260,8 +260,12 @@ inline Colour expf(const Colour& c) {
   return { expf(c.r), expf(c.g), expf(c.b) };
 }
 
+inline floating luminance (floating r, floating g, floating b) {
+    return 0.2126*r + 0.7152*g + 0.0722*b;
+}
+
 inline floating luminance (const Colour& c) {
-    return 0.2126*c.r + 0.7152*c.g + 0.0722*c.b;
+    return luminance(c.r, c.g, c.b);
 }
 
 #endif

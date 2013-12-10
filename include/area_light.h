@@ -9,18 +9,17 @@
 class AreaLight : public Rectangle, public Light {
 public: /* Methods: */
 
-  AreaLight (Point p, Vector u, Vector v, Colour c)
+  AreaLight (Point p, Vector u, Vector v, Colour c, floating emission = 1.0)
     : Rectangle { p, u, v, true }
-    , Light { c }
+    , Light { c, emission }
   { }
 
-  AreaLight(const Rectangle& rect, const Colour& c)
-    : Rectangle(rect), Light(c)
+  AreaLight(const Rectangle& rect, const Colour& c, floating emission = 1.0)
+    : Rectangle(rect), Light { c, emission }
   { }
 
-  const Primitive* prim () const {
-      return this;
-  }
+  const Primitive* prim () const { return this; }
+  const Light* as_light () const { return this; }
 
   Ray sample() const {
     const auto h = rng();

@@ -251,13 +251,24 @@ private: /* Methods: */
       return std::move (vertices);
   }
 
+  Light* pickLight () {
+      floating acc = 0.0;
+      for (auto l : m_scene.lights()) {
+        acc += l->samplingPr();
+        if (rng () <= acc) {
+          return l;
+        }
+      }
+
+      assert (acc >= 1.0);
+      assert (false && "Unreachable code.");
+      return nullptr;
+  }
+
   // TODO: all lights emit same intensity light!
   VertexList traceLight (floating& lightPA) {
       assert (! m_scene.lights ().empty ());
-      const auto nLights = m_scene.lights ().size ();
-//      const floating lightPr = 1.0 / (floating) nLights;
-      const auto li = rngInt (nLights - 1);
-      const auto light = m_scene.lights ()[li];
+      const auto light = pickLight ();
       const auto R = light->sample ();
       const auto N = light->prim()->normal(R.origin ());
       lightPA = light->lightPA ();
@@ -292,7 +303,8 @@ private: /* Methods: */
       for (size_t t = 1; t <= NE; ++ t) {
           const auto prim = eyeVertices[t - 1].m_prim;
           if (prim && prim->is_light ()) {
-              c(0, t) = eyeVertices[t - 1].m_col*emission;
+            const auto l = prim->as_light ();
+            c(0, t) = eyeVertices[t - 1].m_col*l->emission();
           }
       }
 
@@ -413,8 +425,12 @@ private: /* Methods: */
 
       alpha_L[0] = Colour { 1.0, 1.0, 1.0 };
 
-      if (NL >= 1)
-          alpha_L[1] = (M_PI*getMat (lightVertices[0].m_prim).colour ()*emission) / lightPA;
+      if (NL >= 1) {
+        auto prim = lightVertices[0].m_prim;
+        assert (prim->is_light());
+        auto l = prim->as_light ();
+        alpha_L[1] = (M_PI*l->colour()*l->emission()) / lightPA;
+      }
       if (NL >= 2)
           alpha_L[2] = (1.0 / M_PI) / lightVertices[0].m_pr * alpha_L[1];
       for (size_t i = 3; i <= NL; ++ i)
