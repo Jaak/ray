@@ -43,8 +43,9 @@ inline floating fresnel (floating cosI, floating n1, floating n2) {
     }
 
     const auto n = n1 / n2;
-    const auto sinISq = 1.0 - cosI*cosI;
-    const auto term = std::sqrt(1.0 - n*n*sinISq);
+    const auto sinT2 = n*n*(1.0 - cosI*cosI);
+    if (sinT2 > 1.0) return 1.0;
+    const auto term = std::sqrt(1.0 - sinT2);
     const auto Rs = (n1*cosI - n2*term) / (n1*cosI + n2*term);
     const auto Rp = (n1*term - n2*cosI) / (n1*term + n2*cosI);
     return (Rs*Rs + Rp*Rp) / 2.0;

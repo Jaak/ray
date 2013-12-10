@@ -165,7 +165,6 @@ private: /* Methods: */
           const auto V = ray.dir();
           const auto N = prim->normal (point);
           const auto internal = V.dot(N) > 0.0;
-          const auto into = ! internal;
           const auto N2 = internal ? -N : N;
           auto pr = clamp(luminance (objCol), 0, 1);
 
@@ -200,17 +199,18 @@ private: /* Methods: */
               if (internal)
                   std::swap (n1, n2);
               const auto n = n1 / n2;
-              const auto cosT1 = - V.dot(N2);
-              const auto cosT2 = 1.0 - n * n * (1.0 - cosT1 * cosT1);
-              if (cosT2 < 0.0) {
-                  const auto reflDir = reflect (V, N2);
-                  vertices.emplace_back(point, N2, objCol, prim, pr, REFLECT);
-                  ray = shootRay (point, reflDir);
+              const auto cosI = - V.dot(N2);
+              const auto sinT2 = n * n * (1.0 - cosI * cosI);
+              if (sinT2 > 1.0) { // TIR
+                  const auto dir = reflect (V, N2);
+                  vertices.emplace_back (point, N2, objCol, prim, pr, REFLECT);
+                  ray = shootRay (point, dir);
                   break;
               }
 
-              const auto T = normalised (n * V - N2 * (n * cosT1 + sqrt (cosT2)));
-              const auto Re = fresnel (cosT1, n1, n2);
+              const auto cosT = std::sqrt (1.0 - sinT2);
+              const auto T = normalised (n * V + N2 * (n * cosI - cosT));
+              const auto Re = fresnel (cosI, n1, n2);
               const auto Tr = 1.0 - Re;
               if (rng () < Re) {
                   const auto reflDir = reflect (V, N2);
@@ -219,7 +219,7 @@ private: /* Methods: */
                   break;
               }
               else {
-                  vertices.emplace_back(point, - N2, Tr*objCol, prim, pr*Tr, REFRACT);
+                  vertices.emplace_back(point, N2, Tr*objCol, prim, pr*Tr, REFRACT);
                   ray = shootRay (point, T);
                   break;
               }
