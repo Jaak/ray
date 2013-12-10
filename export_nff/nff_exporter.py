@@ -151,7 +151,11 @@ class MeshObject:
         self.__WriteMeshWithMaterial()
         return
       self.__WriteMaterial(Material)
-      self.Exporter.File.write("t %s\n" % (tex.image.filepath))
+      filepath = tex.image.filepath.split('/')
+      name = filepath[len(filepath) - 1].split('.')
+      path = str(name[0]) + ".tga"
+      
+      self.Exporter.File.write("t %s\n" % (path))
       
       for Polygon in self.Mesh.polygons:
         if Polygon.material_index == id:
