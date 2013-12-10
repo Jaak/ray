@@ -111,6 +111,51 @@ public: /* Methods: */
                 m_verts[2].m_pos[axis]);
   }
 
+
+  /*
+  const Colour getColourAtIntersection(const Point& point, const Texture* texture) const {
+    const Point A = m_verts[0].m_pos;
+    const int ku = (k + 1) % 3, kv = (k + 2) % 3;
+    const floating hu = point[ku] - A[ku];
+    const floating hv = point[kv] - A[kv];
+    const auto u = hv * bnu + hu * bnv;
+    const auto v = hu * cnu + hv * cnv;
+    
+    return texture->getTexel(u, v);
+  }
+  */
+
+  const Colour getColourAtIntersection(const Point& point, const Texture* texture) const {
+    // http://gamedev.stackexchange.com/a/23745
+
+    // barycentric coords of the triangle
+    floating bu, bv, bw;
+
+    // texture coords
+    floating tu, tv;
+
+    const Point A = m_verts[0].m_pos;
+    const Point B = m_verts[1].m_pos;
+    const Point C = m_verts[2].m_pos;
+
+    Vector v0 = B - A;
+    Vector v1 = C - A;
+    Vector v2 = point - A;
+    floating d00 = v0.dot(v0);
+    floating d01 = v0.dot(v1);
+    floating d11 = v1.dot(v1);
+    floating d20 = v2.dot(v0);
+    floating d21 = v2.dot(v1);
+    floating denom =  d00 * d11 - d01 * d01;
+    bv = (d11 * d20 - d01 * d21) / denom;
+    bw = (d00 * d21 - d01 * d20) / denom;
+    bu = 1.0 - bv - bw;
+    tu = bu * A.u + bv * B.u + bw * C.u;
+    tv = bu * A.v + bv * B.v + bw * C.v;
+    
+    return texture->getTexel(tu, tv);
+  }
+
 private: /* Fields: */
   Vertex m_verts[3];
   floating nu, nv, nd;

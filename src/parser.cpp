@@ -285,7 +285,6 @@ void do_poly(Scene& scene, FILE* fp) {
     ungetc(ispatch, fp);
     ispatch = 0;
   }
-
   textured = getc(fp);
   if (textured != 't') {
     ungetc(textured, fp);
@@ -340,7 +339,16 @@ void do_poly(Scene& scene, FILE* fp) {
   for (int i = 1; i < nverts - 1; ++i) {
     Primitive* p;
 
-    if (ispatch) {
+    if (ispatch && textured) {
+      p = new ITriangle(
+          Point(verts[0][0], verts[0][1], verts[0][2], UVs[0][0], UVs[0][1]),
+          Point(verts[i][0], verts[i][1], verts[i][2], UVs[i][0], UVs[i][1]),
+          Point(verts[i + 1][0], verts[i + 1][1], verts[i + 1][2], UVs[i + 1][0], UVs[i + 1][1]),
+          Vector(norms[0][0], norms[0][1], norms[0][2]),
+          Vector(norms[i][0], norms[i][1], norms[i][2]),
+          Vector(norms[i + 1][0], norms[i + 1][1], norms[i + 1][2]));  
+    }
+    else if (ispatch) {
       p = new ITriangle(
           Point(verts[0][0], verts[0][1], verts[0][2]),
           Point(verts[i][0], verts[i][1], verts[i][2]),
