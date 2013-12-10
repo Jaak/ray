@@ -229,9 +229,9 @@ def ToGlobalCoordinatesVec(mat, vec):
   return ((x, y, z))
 
 def ToGlobalCoordinatesPoint(mat, p):
-  x = mat[0][0] * p[0] + mat[0][1] * p[1] + mat[0][2] * p[2]
-  y = mat[1][0] * p[0] + mat[1][1] * p[1] + mat[1][2] * p[2]
-  z = mat[2][0] * p[0] + mat[2][1] * p[1] + mat[2][2] * p[2]
+  x = mat[0][0] * p[0] + mat[0][1] * p[1] + mat[0][2] * p[2] + mat[0][3]
+  y = mat[1][0] * p[0] + mat[1][1] * p[1] + mat[1][2] * p[2] + mat[1][3]
+  z = mat[2][0] * p[0] + mat[2][1] * p[1] + mat[2][2] * p[2] + mat[2][3]
   return ((x, y, z))
   
   
