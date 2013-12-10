@@ -20,7 +20,7 @@ resolution 512 512
 
 #light source
 #ls 10 275 530 275
-la  200 548 50  150 0 0  0 0 200
+la  200 548 50  150 0 0  0 0 200  20 20 20
 
 
 #Right wall - green

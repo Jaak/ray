@@ -19,11 +19,12 @@
 class PointLight : public Sphere, public Light {
 public: /* Methods: */
 
-  PointLight(const Point& p, const Colour& c) : Sphere(p, 0.01, true), Light(c) {}
-
-  PointLight(const Point& p) : Sphere(p, 0.01, true), Light(Colour(1, 1, 1)) {}
+  PointLight(const Point& p, const Colour& c = Colour { 1, 1, 1}, floating emission = 1.0)
+    : Sphere(p, 0.01, true), Light(c, emission)
+  {}
 
   const Primitive* prim () const { return this; }
+  const Light* as_light () const { return this; }
 
   Ray sample () const {
     return { center(), rngSphere ()};
@@ -43,11 +44,12 @@ public: /* Methods: */
 class SphereLight : public Sphere, public Light {
 public: /* Methods: */
 
-    SphereLight(const Point& p, floating r, const Colour& c) : Sphere(p, r, true), Light(c) {}
-
-    SphereLight(const Point& p, floating r) : Sphere(p, r, true), Light(Colour(1, 1, 1)) {}
+    SphereLight(const Point& p, floating r, const Colour& c = Colour{1,1,1}, floating emission = 1.0)
+      : Sphere(p, r, true), Light(c, emission)
+    {}
 
     const Primitive* prim () const { return this; }
+    const Light* as_light () const { return this; }
 
     Ray sample () const {
         const auto normal = rngSphere ();

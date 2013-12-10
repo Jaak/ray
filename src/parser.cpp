@@ -107,29 +107,36 @@ fmterr:
   exit(1);
 }
 
-void do_regular_light (Scene& scene, FILE* fp) {
-  float x, y, z, r = 1.0, g = 1.0, b = 1.0;
-  const auto n = fscanf(fp, "%f %f %f %f %f %f", &x, &y, &z, &r, &g, &b);
-  if (n != 3 && n != 6) {
-    show_error("Light source syntax error");
-    exit(1);
-  }
+void do_regular_light(Scene &scene, FILE *fp) {
+    float x, y, z, r = 1.0, g = 1.0, b = 1.0;
+    const auto n = fscanf(fp, "%f %f %f %f %f %f", &x, &y, &z, &r, &g, &b);
+    if (n != 3 && n != 6) {
+      show_error("Light source syntax error");
+      exit(1);
+    }
 
-  auto light = new PointLight(Point(x, y, z), Colour(r, g, b));
-  scene.addLight(light);
+    const auto emission = luminance(r, g, b);
+    const auto col = Colour(r, g, b) / emission;
+    const auto mat = Material{ col };
+    Light* light = new PointLight(Point(x, y, z), col, emission);
+    light->prim()->setMaterial(scene.materials().registerMaterial(mat));
+    scene.addLight(light);
 }
 
-// TODO: more area lights
-void do_sphere_light(Scene& scene, FILE* fp) {
+void do_sphere_light(Scene &scene, FILE *fp) {
     float R, x, y, z, r = 1.0, g = 1.0, b = 1.0;
     const auto n = fscanf(fp, "%f %f %f %f %f %f %f", &R, &x, &y, &z, &r, &g, &b);
     if (n != 4 && n != 7) {
-        show_error ("Spherical area light source syntax error");
-        exit (1);
+      show_error("Spherical area light source syntax error");
+      exit(1);
     }
 
-    auto light = new SphereLight { Point { x, y, z}, R, Colour { r, g, b } };
-    scene.addLight (light);
+    const auto emission = luminance(r, g, b);
+    const auto col = Colour(r, g, b) / emission;
+    const auto mat = Material{ col };
+    Light* light = new SphereLight{ Point{ x, y, z }, R, col, emission };
+    light->prim()->setMaterial(scene.materials().registerMaterial(mat));
+    scene.addLight(light);
 }
 
 void do_area_light (Scene& scene, FILE* fp) {
@@ -141,12 +148,17 @@ void do_area_light (Scene& scene, FILE* fp) {
         exit (1);
     }
 
-    auto light = new AreaLight {
+    const auto emission = luminance(r, g, b);
+    const auto col = Colour(r, g, b) / emission;
+    const auto mat = Material{ col };
+    Light* light = new AreaLight {
       Point { x, y, z},
       Vector { ux, uy, uz },
       Vector { vx, vy, vz },
-      Colour { r, g, b }
+      col,
+      emission
     };
+    light->prim()->setMaterial(scene.materials().registerMaterial(mat));
     scene.addLight (light);
 }
 
@@ -159,13 +171,15 @@ void do_spotlight (Scene& scene, FILE* fp) {
         exit (1);
     }
 
-    auto light = new Spotlight {
-      Point { x, y, z},
-      sr,
+    const auto emission = luminance(r, g, b);
+    const auto col = Colour(r, g, b) / emission;
+    const auto mat = Material{ col };
+    Light* light = new Spotlight {
+      Point { x, y, z}, sr,
       Vector { dx, dy, dz },
-      a,
-      Colour { r, g, b }
+      a, col, emission
     };
+    light->prim()->setMaterial(scene.materials().registerMaterial(mat));
     scene.addLight (light);
 }
 

@@ -7,6 +7,7 @@
 
 class Intersection;
 class Ray;
+class Light;
 
 class Primitive {
 public: /* Methods: */
@@ -52,6 +53,10 @@ public: /* Methods: */
   virtual floating getLeftExtreme(Axes axis) const = 0;
 
   bool is_light() const { return m_is_light; }
+
+  virtual const Light* as_light () const { return nullptr; }
+  Light* as_light () { return const_cast<Light*>(static_cast<const Primitive*>(this)->as_light()); }
+
 
   /// Greates coordinate of the primitive on @a axis
   virtual floating getRightExtreme(Axes axis) const = 0;

@@ -200,7 +200,7 @@ public: /* Methods: */
 
       for (size_t i = 0; i < 4; ++ i) {
           const auto j = (rot + i) % 4;
-          const auto newRot = (j + 2) % 4;
+          const auto newRot = (rot + 2) % 4;
           bs[j].subdiv (numPixels, blocks, newRot);
       }
   }
@@ -251,18 +251,30 @@ void Scene::init() {
     surface->init();
   }
 
+  floating acc = 0.0;
+  for (auto light : m_lights) {
+    acc += light->emission ();
+  }
+
+  if (acc > 0.0) {
+    acc = 1.0 / acc;
+    for (auto light : m_lights) {
+      light->setSamplingPr(light->emission()*acc);
+    }
+  }
+
   m_camera.init();
   m_manager->init();
 }
 
 void Scene::addPrimitive(const Primitive* p) { m_manager->addPrimitive(p); }
 
-void Scene::addLight(const Light* l) {
+void Scene::addLight(Light* l) {
     m_lights.push_back(l);
     addPrimitive (l->prim ());
 }
 
-const std::vector<const Light*>& Scene::lights() const { return m_lights; }
+const std::vector<Light*>& Scene::lights() const { return m_lights; }
 
 void Scene::run() {
   if (MULTISAMPLE) {

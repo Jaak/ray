@@ -55,8 +55,8 @@ public: /* Methods: */
   void setSceneReader(SceneReader* sr);
 
   void addPrimitive (const Primitive* prim);
-  void addLight (const Light*  light);
-  const std::vector<const Light* >& lights() const;
+  void addLight (Light*  light);
+  const std::vector<Light* >& lights() const;
   void attachSurface(Surface* surface) { m_surfaces.emplace_back(surface); }
   const std::vector<std::unique_ptr<Surface>>& surfaces() const { return m_surfaces; }
   PrimitiveManager& manager() const { return *m_manager; }
@@ -79,7 +79,7 @@ protected: /* Fields: */
   Materials                             m_materials;
   std::unique_ptr<PrimitiveManager>     m_manager;       ///< Primitive manager of the scene.
   std::unique_ptr<SceneReader>          m_scene_reader;  ///< Way to read scene from a source.
-  std::vector<const Light* >            m_lights;        ///< Lights of the scene.
+  std::vector<Light* >                  m_lights;        ///< Lights of the scene.
   material_index_t                      m_background;    ///< Background material.
   std::vector<std::unique_ptr<Surface>> m_surfaces;      ///< Output surfaces.
   Textures                              m_textures;

@@ -51,7 +51,8 @@ void parseCommandLine(int argc, char** argv, po::options_description& desc, po::
 
 int main(int argc, char** argv) {
   Scene scene;
-  po::options_description desc ("Command line options:");
+  const std::string name = "Command line options:";
+  po::options_description desc (name);
   po::variables_map vm;
   parseCommandLine(argc, argv, desc, vm);
 
