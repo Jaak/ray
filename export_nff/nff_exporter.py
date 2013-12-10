@@ -185,14 +185,14 @@ class MeshObject:
     
   def __WritePolygon(self, Polygon):
     l = len(Polygon.vertices)
+    normal = ToGlobalCoordinatesVec(self.m, Polygon.normal)
     
     if self.Config.ExportMaterials and self.Config.ExportUVCoordinates and self.Config.ExportNormals:
       self.Exporter.File.write("ppt %d\n" % (l))
       for i in Polygon.loop_indices:
         loop = self.Mesh.loops[i]
         Vertex = self.Mesh.vertices[loop.vertex_index]
-        coord = ToGlobalCoordinates(self.m, Vertex.co)
-        normal = ToGlobalCoordinates(self.m, Vertex.normal)
+        coord = ToGlobalCoordinatesPoint(self.m, Vertex.co)
         for j, ul in enumerate(self.Mesh.uv_layers):
             uv_coord = ul.data[loop.index].uv
         self.Exporter.File.write("%f %f %f %f %f %f %f %f\n" % (coord[0], coord[1], coord[2], normal[0], normal[1], normal[2], uv_coord[0], uv_coord[1]))
@@ -202,7 +202,7 @@ class MeshObject:
       for i in Polygon.loop_indices:
         loop = self.Mesh.loops[i]
         Vertex = self.Mesh.vertices[loop.vertex_index]
-        coord = ToGlobalCoordinates(self.m, Vertex.co)
+        coord = ToGlobalCoordinatesPoint(self.m, Vertex.co)
         for j, ul in enumerate(self.Mesh.uv_layers):
             uv_coord = ul.data[loop.index].uv
         self.Exporter.File.write("%f %f %f %f %f\n" % (coord[0], coord[1], coord[2], uv_coord[0], uv_coord[1]))
@@ -211,22 +211,27 @@ class MeshObject:
       self.Exporter.File.write("pp %d\n" % (l))
       for i in Polygon.vertices:
         Vertex = self.Mesh.vertices[i]
-        coord = ToGlobalCoordinates(self.m, Vertex.co)
-        normal = ToGlobalCoordinates(self.m, Vertex.normal)
+        coord = ToGlobalCoordinatesPoint(self.m, Vertex.co)
         self.Exporter.File.write("%f %f %f %f %f %f\n" % (coord[0], coord[1], coord[2], normal[0], normal[1], normal[2]))
           
     else:
       self.Exporter.File.write("p %d\n" % (l))
       for i in Polygon.vertices:
         Vertex = self.Mesh.vertices[i]
-        coord = ToGlobalCoordinates(self.m, Vertex.co)
+        coord = ToGlobalCoordinatesPoint(self.m, Vertex.co)
         self.Exporter.File.write("%f %f %f\n" % (coord[0], coord[1], coord[2]))
 
   
-def ToGlobalCoordinates(mat, vec):
-  x = mat[0][0] * vec[0] + mat[0][1] * vec[1] + mat[0][2] * vec[2] + mat[0][3] * 1
-  y = mat[1][0] * vec[0] + mat[1][1] * vec[1] + mat[1][2] * vec[2] + mat[1][3] * 1
-  z = mat[2][0] * vec[0] + mat[2][1] * vec[1] + mat[2][2] * vec[2] + mat[2][3] * 1
+def ToGlobalCoordinatesVec(mat, vec):
+  x = mat[0][0] * vec[0] + mat[0][1] * vec[1] + mat[0][2] * vec[2]
+  y = mat[1][0] * vec[0] + mat[1][1] * vec[1] + mat[1][2] * vec[2]
+  z = mat[2][0] * vec[0] + mat[2][1] * vec[1] + mat[2][2] * vec[2]
+  return ((x, y, z))
+
+def ToGlobalCoordinatesPoint(mat, p):
+  x = mat[0][0] * p[0] + mat[0][1] * p[1] + mat[0][2] * p[2]
+  y = mat[1][0] * p[0] + mat[1][1] * p[1] + mat[1][2] * p[2]
+  z = mat[2][0] * p[0] + mat[2][1] * p[1] + mat[2][2] * p[2]
   return ((x, y, z))
   
   
