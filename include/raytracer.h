@@ -45,10 +45,10 @@ private: /* Methods: */
   // TODO: giant hack, we just sample a single point on the light source
   // and if the point isnt visible we are completely in shadow.
   floating getShade(const Light* l, Point point, Vector& L) {
-    const Point p = l->sample ().origin ();
-    const Ray ray = shootRay(point, p);
+    const auto p = l->sample ().origin ();
+    const auto ray = shootRay(point, p);
     L = normalised(p - point);
-    const Intersection intr = intersectWithPrims(ray);
+    const auto intr = intersectWithPrims(ray);
     if (intr.hasIntersections() && intr.getPrimitive()->is_light()) {
       return 1.0;
     }
@@ -69,6 +69,16 @@ private: /* Methods: */
     else {
       return doLighting(ray, intr, depth, iior);
     }
+  }
+
+  Colour getPrimColour (const Primitive* prim, const Point& point) const {
+    const auto& m = m_scene.materials ()[prim->material()];
+    if (prim->texture() >= 0) {
+      const Texture* texture = m_scene.textures()[prim->texture()];
+      return prim->getColourAtIntersection(point, texture);
+    }
+
+    return m.colour ();
   }
 
   Colour doLighting(const Ray& ray, const Intersection& intr, int depth, floating iior) {
@@ -97,16 +107,7 @@ private: /* Methods: */
       const auto R = reflect (L, N);
       const auto diff = m.kd () * clamp (L.dot(N), 0, 1);
       const auto spec = m.ks () * pow(clamp(V.dot(R), 0, 1), m.phong_pow());
-      //col += (diff + spec) * m.colour() * l->colour();
-      
-      if (prim->texture() >= 0) {
-        const Texture* texture = m_scene.textures()[prim->texture()];
-        col += (diff + spec) * prim->getColourAtIntersection(point, texture) * l->colour();
-      }
-      else {
-        col += (diff + spec) * m.colour() * l->colour();
-      }
-
+      col += (diff + spec) * getPrimColour (prim, point) * l->colour();
     }
 
     // reflection

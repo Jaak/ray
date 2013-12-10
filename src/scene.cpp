@@ -345,7 +345,7 @@ void Scene::run() {
 
     Block entireScreen { 0, m_camera.height(), 0, m_camera.width() };
     std::vector<Block> blocks; // , back;
-    entireScreen.subdiv (32 * 32, blocks);
+    entireScreen.subdiv (16 * 16, blocks);
 
     { // first we render a rough scene
       boost::thread_group threads;
@@ -358,7 +358,7 @@ void Scene::run() {
     }
 
     blocks.clear ();
-    entireScreen.subdiv (16 * 16, blocks);
+    entireScreen.subdiv (8 * 8, blocks);
 
     { // render good scene
       boost::thread_group threads;

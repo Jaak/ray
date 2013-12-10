@@ -167,11 +167,11 @@ private: /* Methods: */
           const auto internal = V.dot(N) > 0.0;
           const auto into = ! internal;
           const auto N2 = internal ? -N : N;
-          floating pr = luminance (objCol);
+          auto pr = clamp(luminance (objCol), 0, 1);
 
           if (depth > RAY_MAX_REC_DEPTH) {
               if (pr <= rng ()) {
-                  vertices.emplace_back (point, N, Colour { 0.0, 0.0, 0.0 }, prim, 0.0, DIFFUSE);
+                  vertices.emplace_back (point, N2, Colour { 0.0, 0.0, 0.0 }, prim, 0.0, DIFFUSE);
                   return;
               }
           }
@@ -181,17 +181,17 @@ private: /* Methods: */
 
           switch (getEventType (m)) {
           case LIGHT:
-              vertices.emplace_back (point, N, objCol / M_PI, prim, pr / M_PI, LIGHT);
+              vertices.emplace_back (point, N2, objCol / M_PI, prim, pr / M_PI, LIGHT);
               return;
           case DIFFUSE: {
-              const auto dir = rngHemisphereVector (N);
-              vertices.emplace_back (point, N, objCol / M_PI, prim, pr / M_PI, DIFFUSE);
+              const auto dir = rngHemisphereVector (N2);
+              vertices.emplace_back (point, N2, objCol / M_PI, prim, pr / M_PI, DIFFUSE);
               ray = shootRay (point, dir);
               break;
           }
           case REFLECT: {
-              const auto dir = reflect (V, N);
-              vertices.emplace_back (point, N, objCol, prim, pr, REFLECT);
+              const auto dir = reflect (V, N2);
+              vertices.emplace_back (point, N2, objCol, prim, pr, REFLECT);
               ray = shootRay (point, dir);
               break;
           }
@@ -200,26 +200,26 @@ private: /* Methods: */
               if (internal)
                   std::swap (n1, n2);
               const auto n = n1 / n2;
-              const auto cosT1 = V.dot(N2);
+              const auto cosT1 = - V.dot(N2);
               const auto cosT2 = 1.0 - n * n * (1.0 - cosT1 * cosT1);
               if (cosT2 < 0.0) {
-                  const auto reflDir = reflect (V, N);
+                  const auto reflDir = reflect (V, N2);
                   vertices.emplace_back(point, N2, objCol, prim, pr, REFLECT);
                   ray = shootRay (point, reflDir);
                   break;
               }
 
-              const auto T = normalised (n * V - (into ? 1.0 : -1.0) * N * (n * cosT1 + sqrt (cosT2)));
-              const auto Re = fresnel (- cosT1, n1, n2);
+              const auto T = normalised (n * V - N2 * (n * cosT1 + sqrt (cosT2)));
+              const auto Re = fresnel (cosT1, n1, n2);
               const auto Tr = 1.0 - Re;
               if (rng () < Re) {
-                  const auto reflDir = reflect (V, N);
-                  vertices.emplace_back(point, N, Re*objCol, prim, pr*Re, REFLECT);
+                  const auto reflDir = reflect (V, N2);
+                  vertices.emplace_back(point, N2, Re*objCol, prim, pr*Re, REFLECT);
                   ray = shootRay (point, reflDir);
                   break;
               }
               else {
-                  vertices.emplace_back(point, -N, Tr*objCol, prim, pr*Tr, REFRACT);
+                  vertices.emplace_back(point, - N2, Tr*objCol, prim, pr*Tr, REFRACT);
                   ray = shootRay (point, T);
                   break;
               }
@@ -256,7 +256,8 @@ private: /* Methods: */
       assert (! m_scene.lights ().empty ());
       const auto nLights = m_scene.lights ().size ();
 //      const floating lightPr = 1.0 / (floating) nLights;
-      const auto light = m_scene.lights ()[nLights - 1];
+      const auto li = rngInt (nLights - 1);
+      const auto light = m_scene.lights ()[li];
       const auto R = light->sample ();
       const auto N = light->prim()->normal(R.origin ());
       lightPA = light->lightPA ();
