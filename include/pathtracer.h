@@ -12,14 +12,7 @@
 #include "vertex.h"
 #include "table.h"
 
-// just to force compilation
-#include "frame.h"
-#include "brdf.h"
-
-#include <boost/range/adaptor/reversed.hpp>
 #include <map>
-
-constexpr floating emission = 20.0;
 
 // TODO: i think that our material representation is all wrong...
 
@@ -46,12 +39,15 @@ static inline floating refractPr (const Material& m) {
 floating generationPr (const Vertex* from, const Vertex* to) {
     assert (from != nullptr && to != nullptr);
     switch (from->m_event) {
-    case LIGHT:
-        return 1.0 / M_PI; // ??
     case DIFFUSE: {
-        const auto dir = normalised (to->m_pos - from->m_pos);
-        const auto cosT = from->m_normal.dot (dir);
-        return cosT <= 0.0 ? 0.0 : 1.0 / (2.0 * M_PI * cosT);
+        if (from->m_prim->is_light ()) {
+            const auto dir = normalised (to->m_pos - from->m_pos);
+            const auto cosT = from->m_normal.dot (dir);
+            return cosT <= 0.0 ? 0.0 : 1.0 / (2.0 * M_PI * cosT);
+        }
+        else {
+            return 1.0 / M_PI;
+        }
     }
     case REFLECT:
     case REFRACT:
@@ -152,7 +148,7 @@ private: /* Methods: */
 
   void trace (Ray ray, VertexList& vertices) {
       size_t depth = 1;
-      while (true) {
+      while (depth < 5) {
           const auto intr = intersectWithPrims (ray);
           if (! intr.hasIntersections ()) {
               return;
@@ -178,10 +174,12 @@ private: /* Methods: */
               pr = 1.0;
           }
 
-          switch (getEventType (m)) {
-          case LIGHT:
-              vertices.emplace_back (point, N2, objCol / M_PI, prim, pr / M_PI, LIGHT);
+          if (prim->is_light ()) {
+              vertices.emplace_back (point, N2, objCol / M_PI, prim, pr / M_PI, DIFFUSE);
               return;
+          }
+
+          switch (getEventType (m)) {
           case DIFFUSE: {
               const auto dir = rngHemisphereVector (N2);
               vertices.emplace_back (point, N2, objCol / M_PI, prim, pr / M_PI, DIFFUSE);
@@ -278,7 +276,7 @@ private: /* Methods: */
       vertices.emplace_back (
         R.origin(), N, light->colour(), light->prim(),
         1.0 / (2.0 * M_PI * N.dot (R.dir ())),
-        LIGHT
+        DIFFUSE
       );
       trace (R, vertices);
       return std::move (vertices);

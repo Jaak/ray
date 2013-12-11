@@ -11,7 +11,6 @@ enum EventType {
     DIFFUSE,
     REFLECT,
     REFRACT,
-    LIGHT,
     EYE
 };
 
