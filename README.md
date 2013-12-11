@@ -2,7 +2,9 @@
 
 This is our projects repository for computer graphics course.
 
-## Dependencies
+## Installation instruction
+
+### Dependencies
   
 The following packages are required:
 * gcc 4.7 or clang 3.1
@@ -16,15 +18,21 @@ On debian based system the packages could be installed as follows:
 $ sudo apt-get install gcc cmake libsdl1.2-dev libboost-dev libgd-dev
 </pre>
 
-## Build instructions
+On gentoo make sure that png USE flag is enabled and as root:
+<pre>
+$ emerge -a1 cmake libsdl gd boost
+</pre>
+
+### Build instructions
 
 In the root source directory:
 <pre>
+$ cp config.local.example config.local
 $ mkdir build
 $ cd build
 $ cmake ..
-$ make -j3 # Or higher values if you have more cores than two
-$ ./src/ray ../nff/tetra7.nff
+$ make -j3
+$ ./src/ray --help
 </pre>
 
 ## Goals for Computer Graphics course
