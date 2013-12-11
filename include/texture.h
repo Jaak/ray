@@ -13,41 +13,22 @@ public: /* Methods: */
     : table<Colour> (w, h)
   {}
 
-  const Colour& getTexel(floating u, floating v) const {
+  Colour getTexel(floating u, floating v) const {
+    u = clamp(u * width() - 0.5, 0.0, width() - 2);
+    v = clamp(v * height() - 0.5, 0.0, height() - 2);
 
-  /*  if (interpolate) {
-      const size_t x = clamp(round(u * width()), 0.0, width() - 1);
-      const size_t y = clamp(round(v * height()), 0.0, height() - 1);
-
-      return (*this)(x, y);
-    }*/    
-
-    floating x, y, x1, x2, y1, y2;
-    Colour c11, c12, c21, c22;
-
-    x = clamp(u * width(), 0.0, width() - 1);
-    y = clamp(v * height(), 0.0, height() - 1);
-
-    x1 = floor(x); x2 = ceil(x);
-    y1 = floor(y); y2 = ceil(y);
-
-    if (almost_zero(x2 - x1) || almost_zero(y2 - y1)) {
-      return (*this)(round(x), round(y)); 
-    }
-
-    c11 = (*this)(x1, y1);
-    c12 = (*this)(x1, y2);
-    c21 = (*this)(x2, y1);
-    c22 = (*this)(x2, y2);
-
-    const Colour& result = (1.0 / (x2 - x1) * (y2 - y1)) *
-                  (c11 * (x2 - x) * (y2 - y) +
-                   c12 * (x - x1) * (y2 - y) +
-                   c21 * (x2 - x) * (y - y1) +
-                   c22 * (x - x1) * (y - y1)
-                  );
-
-    return result;
+    const auto x = floor(u);
+    const auto y = floor(v);
+    const auto u_ratio = u - x;
+    const auto v_ratio = v - y;
+    const auto u_opposite = 1.0 - u_ratio;
+    const auto v_opposite = 1.0 - v_ratio;
+    const auto c11 = (*this)(x+0, y+0);
+    const auto c12 = (*this)(x+1, y+0);
+    const auto c21 = (*this)(x+0, y+1);
+    const auto c22 = (*this)(x+1, y+1);
+    return (c11*u_opposite + c12*u_ratio)*v_opposite +
+           (c21*u_opposite + c22*u_ratio)*v_ratio;
   }
     
 };
