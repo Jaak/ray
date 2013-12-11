@@ -9,8 +9,9 @@
 #include "random.h"
 #include "ray.h"
 #include "scene.h"
-#include "vertex.h"
 #include "table.h"
+#include "vertex.h"
+#include "renderer.h"
 
 #include <map>
 
@@ -68,7 +69,7 @@ Colour brdf (const Material& m, const Vector&, const Vector&) {
    * Bidirectional path tracer *
    *****************************/
 
-class Pathtracer {
+class Pathtracer : public Renderer {
 private: /* Methods: */
 
   Pathtracer& operator = (const Pathtracer&) = delete;
@@ -136,9 +137,13 @@ private: /* Methods: */
 
 public: /* Methods: */
 
-  explicit Pathtracer(Scene& s)
-    : m_scene(s)
+  explicit Pathtracer(const Scene& s)
+    : Renderer { s }
   { }
+
+  Colour render (Ray ray) {
+    return run (ray);
+  }
 
   Colour operator () (Ray ray) {
     return run (ray);
@@ -452,9 +457,6 @@ private: /* Methods: */
 
       return std::move (alpha_E);
   }
-
-private: /* Fields: */
-  const Scene& m_scene;
 };
 
 #endif

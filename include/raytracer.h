@@ -8,9 +8,10 @@
 #include "primitive_manager.h"
 #include "random.h"
 #include "ray.h"
+#include "renderer.h"
 #include "scene.h"
 
-class Raytracer {
+class Raytracer : public Renderer {
 private: /* Methods: */
 
   Raytracer& operator = (const Raytracer&) = delete;
@@ -31,9 +32,13 @@ private: /* Methods: */
 
 public: /* Methods: */
 
-  explicit Raytracer(Scene& s)
-    : m_scene(s)
+  explicit Raytracer(const Scene& s)
+    : Renderer { s }
   { }
+
+  Colour render (Ray ray) {
+    return run (ray);
+  }
 
   Colour operator () (Ray ray) {
     return run (ray);
@@ -131,9 +136,6 @@ private: /* Methods: */
 
     return col;
   }
-
-private: /* Fields: */
-  const Scene& m_scene;
 };
 
 #endif

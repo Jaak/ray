@@ -54,36 +54,12 @@ inline floating fresnel (floating cosI, floating n1, floating n2) {
 /**
  * If bidirectional path tracing should be enabled.
  */
-constexpr bool BPT_ENABLED = false;
+constexpr bool BPT_ENABLED = true;
 
 /**
  * How many samples per pixel to take.
  */
-constexpr std::size_t BPT_SAMPLES = 15;
-
-/**
- * This constant is used to determin if subpixel block has to be subdivided.
- * In more detail, we compare the difference of 4 corners and middle of
- * the subpixel block pixels, if any 2 differ more than the given constant
- * the block is divided into 4 and each subblock is reqursively traced.
- */
-constexpr floating AA_TOLERANCE = 0.1;
-
-/**
- * Maximum depth to which pixel block is subdivided.
- * This constant determins maximum number of traced rays, note
- * that the maximum is almost never reached.
- * <PRE>
- * Value    Maximum rays
- * 1        9
- * 2        25
- * 3        81
- * ..       ..
- * n        (2^n + 1)^2
- * </PRE>
- */
-constexpr bool MULTISAMPLE = false;
-constexpr std::size_t AA_MAX_DEPTH = 2;
+constexpr std::size_t BPT_SAMPLES = 100;
 
 /**
  * Maximum number of times ray is bounced around the scene.
