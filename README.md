@@ -53,9 +53,10 @@ the image took around 6 hours to render on a 4 core i7 clocked at 3.4GHz.
 
 ## New features
 
-* Support for area and directional lights.
+* Support for area and spot lights.
 * Bidirectional path tracing algorithm.
 * Blender exporter to slightly modified NFF. Does not fully support materials,
   textures and lights, but provides a nice way to export geometry to NFF.
+* Basic texturing.
 
 ![Cornell box](https://raw.github.com/Jaak/ray/master/imgs/cornell.png)
