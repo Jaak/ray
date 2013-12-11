@@ -28,7 +28,7 @@ public: /* Methods: */
   // Sampling probability
   floating samplingPr () const { return m_samplingPr; }
 
-  void setSamplingPr (floating pr) { m_samplingPr = 1.0; }
+  void setSamplingPr (floating pr) { m_samplingPr = pr; }
 
   /// Every light source must act as a part of the geometry.
   virtual const Primitive* prim () const = 0;
