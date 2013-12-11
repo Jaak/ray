@@ -42,7 +42,7 @@ bidirectional path tracing and use "-s" to set the number of samples. The
 higher the number of samples the longer the rendering will take. The default
 value is 5.
 
-For example, the image below was rendered in the build directory with the following options:
+For example, the first image below was rendered in the build directory with the following options:
 <pre>
 $ ./src/ray --bpt -s 1000 --png out.png --non-interactive ../nff/cornell-spheres.nff
 </pre>
@@ -59,4 +59,8 @@ the image took around 6 hours to render on a 4 core i7 clocked at 3.4GHz.
   textures and lights, but provides a nice way to export geometry to NFF.
 * Basic texturing.
 
+### Example renders
+
 ![Cornell box](https://raw.github.com/Jaak/ray/master/imgs/cornell.png)
+
+![Cornell box with spheres](https://raw.github.com/Jaak/ray/master/imgs/cornell-spheres.png)
