@@ -48,6 +48,7 @@ set(INCLUDEFILES
   "${RAY_INCLUDE_DIR}/sphere.h"
   "${RAY_INCLUDE_DIR}/surface.h"
   "${RAY_INCLUDE_DIR}/table.h"
+  "${RAY_INCLUDE_DIR}/texture.h"
   "${RAY_INCLUDE_DIR}/tga_surface.h"
   "${RAY_INCLUDE_DIR}/triangle.h"
   "${RAY_INCLUDE_DIR}/vertex.h"
