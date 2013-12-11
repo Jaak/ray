@@ -44,6 +44,7 @@ set(INCLUDEFILES
   "${RAY_INCLUDE_DIR}/raytracer.h"
   "${RAY_INCLUDE_DIR}/rectangle.h"
   "${RAY_INCLUDE_DIR}/renderer.h"
+  "${RAY_INCLUDE_DIR}/sampler.h"
   "${RAY_INCLUDE_DIR}/scene.h"
   "${RAY_INCLUDE_DIR}/scene_reader.h"
   "${RAY_INCLUDE_DIR}/sdl_surface.h"
