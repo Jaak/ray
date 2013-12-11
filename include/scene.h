@@ -1,25 +1,27 @@
 #ifndef RAY_SCENE_H
 #define RAY_SCENE_H
 
-#include "common.h"
 #include "camera.h"
+#include "common.h"
 #include "geometry.h"
-#include "surface.h"
 #include "material.h"
 #include "materials.h"
+#include "surface.h"
 #include "texture.h"
 
-#include <vector>
-#include <string>
 #include <cassert>
 #include <memory>
+#include <string>
+#include <vector>
 
-class Pixel;
 class Block;
 class Light;
-class SceneReader;
+class Pixel;
 class Primitive;
 class PrimitiveManager;
+class Renderer;
+class Sampler;
+class SceneReader;
 
 /// Representation of scene.
 class Scene {
@@ -52,6 +54,10 @@ public: /* Methods: */
    */
   void setPrimitiveManager(PrimitiveManager* pm);
 
+  void setRenderer(Renderer* r);
+
+  void setSampler(Sampler* s);
+
   void setSceneReader(SceneReader* sr);
 
   void addPrimitive (const Primitive* prim);
@@ -64,6 +70,10 @@ public: /* Methods: */
   Materials& materials () { return m_materials; }
   Camera& camera() { return m_camera; }
   const Camera& camera() const { return m_camera; }
+  Sampler& sampler () { return *m_sampler; }
+  const Sampler& sampler () const { return *m_sampler; }
+  Renderer& renderer () { return *m_renderer; }
+  const Renderer& renderer () const { return *m_renderer; }
   void setBackground(const Colour& c);
   const Material& background() const;
   std::string getFname();
@@ -83,6 +93,8 @@ protected: /* Fields: */
   material_index_t                      m_background;    ///< Background material.
   std::vector<std::unique_ptr<Surface>> m_surfaces;      ///< Output surfaces.
   Textures                              m_textures;
+  std::unique_ptr<Renderer>             m_renderer;
+  std::unique_ptr<Sampler>              m_sampler;
 };
 
 #endif

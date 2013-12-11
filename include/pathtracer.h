@@ -17,7 +17,7 @@
 
 // TODO: i think that our material representation is all wrong...
 
-static inline EventType getEventType (const Material& m) {
+inline EventType getEventType (const Material& m) {
     const auto total = m.kd () + m.ks () + m.t ();
     const auto r = total*rng ();
     if (r < m.kd ())           return DIFFUSE;
@@ -25,19 +25,19 @@ static inline EventType getEventType (const Material& m) {
     return REFRACT;
 }
 
-static inline floating diffusePr (const Material& m) {
+inline floating diffusePr (const Material& m) {
     return m.kd () / (m.kd () + m.ks () + m.t ());
 }
 
-static inline floating reflectPr (const Material& m) {
+inline floating reflectPr (const Material& m) {
     return m.ks () / (m.kd () + m.ks () + m.t ());
 }
 
-static inline floating refractPr (const Material& m) {
+inline floating refractPr (const Material& m) {
     return m.t () / (m.kd () + m.ks () + m.t ());
 }
 
-floating generationPr (const Vertex* from, const Vertex* to) {
+inline floating generationPr (const Vertex* from, const Vertex* to) {
     assert (from != nullptr && to != nullptr);
     switch (from->m_event) {
     case DIFFUSE: {
@@ -59,7 +59,7 @@ floating generationPr (const Vertex* from, const Vertex* to) {
 }
 
 // TODO: proper brdf, this thing is a huge hack
-Colour brdf (const Material& m, const Vector&, const Vector&) {
+inline Colour brdf (const Material& m, const Vector&, const Vector&) {
   if (reflectPr (m) > 0) return Colour { 0, 0, 0 };
   if (refractPr (m) > 0) return Colour { 0, 0, 0 };
     return m.colour () * diffusePr (m) / M_PI;

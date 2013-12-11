@@ -1,9 +1,12 @@
 #include "kdtree_primitive_manager.h"
 #include "naive_primitive_manager.h"
 #include "nff_scene_reader.h"
+#include "pathtracer.h"
+#include "raytracer.h"
 #include "scene.h"
 #include "sdl_surface.h"
 #include "tga_surface.h"
+#include "uniform_sampler.h"
 
 #ifdef HAVE_GD_SUPPORT_PNG
   #include "png_surface.h"
@@ -18,13 +21,15 @@ namespace po = boost::program_options;
 
 void parseCommandLine(int argc, char** argv, po::options_description& desc, po::variables_map& vm) {
   desc.add_options()
-    ("help,h",                             "Output this help message")
+    ("help,h",                              "Output this help message")
 #ifdef HAVE_GD_SUPPORT_PNG
-    ("png",      po::value<std::string>(), "Output PNG image")
+    ("png",       po::value<std::string>(), "Output PNG image")
 #endif
-    ("tga",      po::value<std::string>(), "Output TGA image")
-    ("input,i",  po::value<std::string>(), "Input NFF file")
-    ("non-interactive",                    "Don't render interactively");
+    ("tga",       po::value<std::string>(), "Output TGA image")
+    ("bpt",                                 "Use bidirection path tracer")
+    ("samples,s", po::value<size_t>(),      "Number of samples per pixel")
+    ("input,i",   po::value<std::string>(), "Input NFF file")
+    ("non-interactive",                     "Don't render interactively");
 
   po::positional_options_description p;
   p.add("input", -1);
@@ -36,7 +41,6 @@ void parseCommandLine(int argc, char** argv, po::options_description& desc, po::
 /**
  * TODO:
  * Major:
- *  - Path tracing (bidirectional)
  *  - Improved input format (.obj, .3ds, or custom blender exporter?)
  *
  * Minor:
@@ -73,6 +77,20 @@ int main(int argc, char** argv) {
 
   if (vm.count("non-interactive") == 0) {
     scene.attachSurface(new SDLSurface());
+  }
+
+  if (vm.count("bpt") == 0) {
+    scene.setRenderer(new Raytracer (scene));
+  }
+  else {
+    scene.setRenderer(new Pathtracer (scene));
+  }
+
+  if (vm.count("samples") == 0) {
+    scene.setSampler(new UniformSampler(5));
+  }
+  else {
+    scene.setSampler(new UniformSampler(vm["samples"].as<size_t>()));
   }
 
 #ifdef HAVE_GD_SUPPORT_PNG

@@ -18,7 +18,7 @@ public: /* Methods: */
 
   const Scene& scene () const { return m_scene; }
 
-protected:
+protected: /* Fields: */
   const Scene& m_scene;
 };
 

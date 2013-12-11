@@ -52,16 +52,6 @@ inline floating fresnel (floating cosI, floating n1, floating n2) {
 }
 
 /**
- * If bidirectional path tracing should be enabled.
- */
-constexpr bool BPT_ENABLED = true;
-
-/**
- * How many samples per pixel to take.
- */
-constexpr std::size_t BPT_SAMPLES = 100;
-
-/**
  * Maximum number of times ray is bounced around the scene.
  * This is not the only parameter that determins the maximum
  * number of bounces, the recursion is also cut when rays contribution

@@ -1,9 +1,11 @@
 #include "camera.h"
 #include "common.h"
+#include "light.h"
 #include "parser.h"
 #include "pixel.h"
-#include "raytracer.h"
-#include "pathtracer.h"
+#include "primitive_manager.h"
+#include "renderer.h"
+#include "sampler.h"
 #include "scene.h"
 #include "scene_reader.h"
 
@@ -11,8 +13,6 @@
 #include <boost/thread.hpp>
 #include <boost/mpl/if.hpp>
 #include <string>
-
-using R = boost::mpl::if_c<BPT_ENABLED, Pathtracer, Raytracer>::type;
 
 Scene::Scene() {
     m_background = m_materials.registerMaterial (Material { Colour { 0, 0, 0 } });
@@ -34,6 +34,14 @@ void Scene::setSceneReader(SceneReader* sr) {
   m_scene_reader = std::unique_ptr<SceneReader>(sr);
 }
 
+void Scene::setRenderer (Renderer* r) {
+  m_renderer = std::unique_ptr<Renderer>(r);
+}
+
+void Scene::setSampler (Sampler* s) {
+  m_sampler  = std::unique_ptr<Sampler>(s);
+}
+
 std::string Scene::getFname() {return (*m_scene_reader).getFname();}
 
 Scene::~Scene() {
@@ -49,21 +57,7 @@ public: /* Methods: */
   { }
 
   void renderRough(Scene& scene) const {
-    R rt { scene };
-    auto c = Colour { 0.0, 0.0, 0.0 };
-    if (BPT_ENABLED) {
-      for (size_t sample = 0; sample < BPT_SAMPLES; ++ sample) {
-        const auto dh = rng () - 0.5;
-        const auto dw = rng () - 0.5;
-        c += rt(scene.m_camera.spawnRay(m_y0 + dh, m_x0 + dw));
-      }
-
-      c = c / BPT_SAMPLES;
-    }
-    else {
-      c = rt(scene.m_camera.spawnRay(m_y0, m_x0));
-    }
-
+    const auto c = scene.sampler().samplePixel (m_x0, m_y0);
     for (auto& surface : scene.surfaces()) {
       for (int h = m_y0; h < m_y1; ++h) {
         for (int w = m_x0; w < m_x1; ++w) {
@@ -73,25 +67,12 @@ public: /* Methods: */
     }
   }
 
-  void renderNice(Scene& scene) const {
-    R rt { scene };
-    for (auto& surface : scene.surfaces()) {
+  void renderNice(Scene &scene) const {
+    for (auto &surface : scene.surfaces()) {
       for (int h = m_y0; h < m_y1; ++h) {
         for (int w = m_x0; w < m_x1; ++w) {
-          if (BPT_ENABLED) {
-            auto col = Colour { 0.0, 0.0, 0.0 };
-            for (size_t sample = 0; sample < BPT_SAMPLES; ++ sample) {
-              const auto dh = rng () - 0.5;
-              const auto dw = rng () - 0.5;
-              const auto c = rt(scene.m_camera.spawnRay(h + dh, w + dw));
-              col += c;
-            }
-
-            surface->setPixel(h, w, col / BPT_SAMPLES);
-          }
-          else {
-            surface->setPixel(h, w, rt(scene.m_camera.spawnRay(h, w)));
-          }
+          const auto c = scene.sampler().samplePixel (w, h);
+          surface->setPixel(h, w, c);
         }
       }
     }
@@ -183,6 +164,8 @@ void Scene::init() {
 
   m_camera.init();
   m_manager->init();
+  m_sampler->setCamera (m_camera);
+  m_sampler->setRenderer (*m_renderer);
 }
 
 void Scene::addPrimitive(const Primitive* p) { m_manager->addPrimitive(p); }
