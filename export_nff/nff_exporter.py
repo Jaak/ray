@@ -88,8 +88,9 @@ def WriteAreaLamp(Exporter, Lamp):
   loc = Lamp.location
   vec_x = [size_x * m[0][0], size_x * m[1][0], size_x * m[2][0]]	# X vecotr
   vec_y = [size_y * m[0][1], size_x * m[1][1], size_x * m[2][1]]	# Y vector
+  pos = [loc[0] - (vec_x[0] + vec_y[0]) / 2.0, loc[1] - (vec_x[1] + vec_y[1]) / 2.0, loc[2] - (vec_x[2] + vec_y[2]) / 2.0]
   colour = Lamp.data.color
-  Exporter.File.write("la %f %f %f %f %f %f %f %f %f %f %f %f\n" % (loc[0], loc[1], loc[2], vec_x[0], vec_x[1], vec_x[2], vec_y[0], vec_y[1], vec_y[2], colour[0], colour[1], colour[2]))
+  Exporter.File.write("la %f %f %f %f %f %f %f %f %f %f %f %f\n" % (pos[0], pos[1], pos[2], vec_x[0], vec_x[1], vec_x[2], vec_y[0], vec_y[1], vec_y[2], colour[0], colour[1], colour[2]))
   
   
 def WriteSpotLamp(Exporter, Lamp):
@@ -108,10 +109,10 @@ class MeshObject:
     self.Exporter = Exporter
     self.BlenderObject = BlenderObject
     
-    self.m = self.BlenderObject.matrix_world
-    
   def Write(self):      
     self.Mesh = self.BlenderObject.to_mesh(self.Exporter.context.scene, False, 'PREVIEW')
+    self.Mesh.transform(self.BlenderObject.matrix_world)
+    self.Mesh.calc_normals_split()
     if self.Config.ExportUVCoordinates:
       self.__WriteMeshWithTexture()
     elif self.Config.ExportMaterials:
@@ -191,54 +192,35 @@ class MeshObject:
       for i in Polygon.loop_indices:
         loop = self.Mesh.loops[i]
         Vertex = self.Mesh.vertices[loop.vertex_index]
-        coord = ToGlobalCoordinatesPoint(self.m, Vertex.co)
-        normal = ToGlobalCoordinatesVec(self.m, Vertex.normal)
+        coord = Vertex.co
+        normal = Vertex.normal
         for j, ul in enumerate(self.Mesh.uv_layers):
             uv_coord = ul.data[loop.index].uv
         self.Exporter.File.write("%f %f %f %f %f %f %f %f\n" % (coord[0], coord[1], coord[2], normal[0], normal[1], normal[2], uv_coord[0], uv_coord[1]))
     
     elif self.Config.ExportMaterials and self.Config.ExportUVCoordinates:
-      self.Exporter.File.write("pt %d\n" % (l))
+      self.Exporter.File.write("ppt %d\n" % (l))
+      normal = Polygon.normal
       for i in Polygon.loop_indices:
         loop = self.Mesh.loops[i]
         Vertex = self.Mesh.vertices[loop.vertex_index]
-        coord = ToGlobalCoordinatesPoint(self.m, Vertex.co)
+        coord = Vertex.co
         for j, ul in enumerate(self.Mesh.uv_layers):
             uv_coord = ul.data[loop.index].uv
-        self.Exporter.File.write("%f %f %f %f %f\n" % (coord[0], coord[1], coord[2], uv_coord[0], uv_coord[1]))
+        self.Exporter.File.write("%f %f %f %f %f %f %f %f\n" % (coord[0], coord[1], coord[2], normal[0], normal[1], normal[2], uv_coord[0], uv_coord[1]))
         
     elif Polygon.use_smooth == True:
       self.Exporter.File.write("pp %d\n" % (l))
       for i in Polygon.vertices:
         Vertex = self.Mesh.vertices[i]
-        coord = ToGlobalCoordinatesPoint(self.m, Vertex.co)
-        normal = ToGlobalCoordinatesVec(self.m, Vertex.normal)
+        coord = Vertex.co
+        normal = Vertex.normal
         self.Exporter.File.write("%f %f %f %f %f %f\n" % (coord[0], coord[1], coord[2], normal[0], normal[1], normal[2]))
           
     else:
-      self.Exporter.File.write("p %d\n" % (l))
+      normal = Polygon.normal
+      self.Exporter.File.write("pp %d\n" % (l))
       for i in Polygon.vertices:
         Vertex = self.Mesh.vertices[i]
-        coord = ToGlobalCoordinatesPoint(self.m, Vertex.co)
-        self.Exporter.File.write("%f %f %f\n" % (coord[0], coord[1], coord[2]))
-
-  
-def ToGlobalCoordinatesVec(mat, vec):
-  x = mat[0][0] * vec[0] + mat[0][1] * vec[1] + mat[0][2] * vec[2]
-  y = mat[1][0] * vec[0] + mat[1][1] * vec[1] + mat[1][2] * vec[2]
-  z = mat[2][0] * vec[0] + mat[2][1] * vec[1] + mat[2][2] * vec[2]
-  return ((x, y, z))
-
-def ToGlobalCoordinatesPoint(mat, p):
-  x = mat[0][0] * p[0] + mat[0][1] * p[1] + mat[0][2] * p[2] + mat[0][3]
-  y = mat[1][0] * p[0] + mat[1][1] * p[1] + mat[1][2] * p[2] + mat[1][3]
-  z = mat[2][0] * p[0] + mat[2][1] * p[1] + mat[2][2] * p[2] + mat[2][3]
-  return ((x, y, z))
-  
-  
-  
-  
-  
-  
-  
-  
+        coord = Vertex.co
+        self.Exporter.File.write("%f %f %f %f %f %f\n" % (coord[0], coord[1], coord[2], normal[0], normal[1], normal[2]))
