@@ -44,10 +44,7 @@ void Scene::setSampler (Sampler* s) {
 
 std::string Scene::getFname() {return (*m_scene_reader).getFname();}
 
-Scene::~Scene() {
-    for (auto light : m_lights)
-        delete light;
-}
+Scene::~Scene() { }
 
 class Block {
 public: /* Methods: */

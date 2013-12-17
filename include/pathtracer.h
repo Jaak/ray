@@ -268,7 +268,6 @@ private: /* Methods: */
       return nullptr;
   }
 
-  // TODO: all lights emit same intensity light!
   VertexList traceLight (floating& lightPA) {
       assert (! m_scene.lights ().empty ());
       const auto light = pickLight ();

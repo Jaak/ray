@@ -93,9 +93,7 @@ KdTreePrimitiveManager::KdTreePrimitiveManager()
 
 KdTreePrimitiveManager::~KdTreePrimitiveManager() {
     for (auto prim : m_prims) {
-        if (!prim->is_light ()) {
-            delete prim;
-        }
+        delete prim;
     }
 
     std::cout << "Intersections : " << icount << std::endl;
