@@ -21,8 +21,6 @@ class ExportNFF(bpy.types.Operator):
   filepath = StringProperty(subtype = 'FILE_PATH')
   
   ExportMeshes = BoolProperty(name = "Export Meshes", description = "Export mesh objects", default = True)
-        
-  ExportNormals = BoolProperty(name = "Export Normals", description = "Export mesh normals", default = True)
   
   ExportMaterials = BoolProperty(name = "Export Materials", description = "Export material properties", default = True)
   

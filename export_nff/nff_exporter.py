@@ -185,14 +185,14 @@ class MeshObject:
     
   def __WritePolygon(self, Polygon):
     l = len(Polygon.vertices)
-    normal = ToGlobalCoordinatesVec(self.m, Polygon.normal)
     
-    if self.Config.ExportMaterials and self.Config.ExportUVCoordinates and self.Config.ExportNormals:
+    if self.Config.ExportMaterials and self.Config.ExportUVCoordinates and Polygon.use_smooth == True:
       self.Exporter.File.write("ppt %d\n" % (l))
       for i in Polygon.loop_indices:
         loop = self.Mesh.loops[i]
         Vertex = self.Mesh.vertices[loop.vertex_index]
         coord = ToGlobalCoordinatesPoint(self.m, Vertex.co)
+        normal = ToGlobalCoordinatesVec(self.m, Vertex.normal)
         for j, ul in enumerate(self.Mesh.uv_layers):
             uv_coord = ul.data[loop.index].uv
         self.Exporter.File.write("%f %f %f %f %f %f %f %f\n" % (coord[0], coord[1], coord[2], normal[0], normal[1], normal[2], uv_coord[0], uv_coord[1]))
@@ -207,11 +207,12 @@ class MeshObject:
             uv_coord = ul.data[loop.index].uv
         self.Exporter.File.write("%f %f %f %f %f\n" % (coord[0], coord[1], coord[2], uv_coord[0], uv_coord[1]))
         
-    elif self.Config.ExportNormals:
+    elif Polygon.use_smooth == True:
       self.Exporter.File.write("pp %d\n" % (l))
       for i in Polygon.vertices:
         Vertex = self.Mesh.vertices[i]
         coord = ToGlobalCoordinatesPoint(self.m, Vertex.co)
+        normal = ToGlobalCoordinatesVec(self.m, Vertex.normal)
         self.Exporter.File.write("%f %f %f %f %f %f\n" % (coord[0], coord[1], coord[2], normal[0], normal[1], normal[2]))
           
     else:
