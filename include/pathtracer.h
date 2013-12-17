@@ -58,13 +58,6 @@ inline floating generationPr (const Vertex* from, const Vertex* to) {
     }
 }
 
-// TODO: proper brdf, this thing is a huge hack
-inline Colour brdf (const Material& m, const Vector&, const Vector&) {
-  if (reflectPr (m) > 0) return Colour { 0, 0, 0 };
-  if (refractPr (m) > 0) return Colour { 0, 0, 0 };
-    return m.colour () * diffusePr (m) / M_PI;
-}
-
   /*****************************
    * Bidirectional path tracer *
    *****************************/
@@ -98,8 +91,8 @@ private: /* Methods: */
     const auto cosT0 = from.m_normal.dot(from2to);
     const auto cosT1 = to.m_normal.dot(to2from);
 
-    if (cosT0 < 0.0) return 0.0;
-    if (cosT1 < 0.0) return 0.0;
+    if (cosT0 <= 0.0) return 0.0;
+    if (cosT1 <= 0.0) return 0.0;
 
     const auto intr = intersectWithPrims(testRay);
     if (! intr.hasIntersections ())
@@ -151,6 +144,25 @@ public: /* Methods: */
 
 private: /* Methods: */
 
+  Colour getPrimColour (const Primitive* prim, const Point& point) const {
+    const auto& m = m_scene.materials ()[prim->material()];
+    if (prim->texture() >= 0) {
+      const Texture* texture = m_scene.textures()[prim->texture()];
+      return prim->getColourAtIntersection(point, texture);
+    }
+
+    return m.colour ();
+  }
+
+
+  // TODO: proper brdf, this thing is a huge hack
+  inline Colour brdf (const Primitive* prim, const Point& p, const Vector&, const Vector&) {
+      const auto& m = getMat (prim);
+      if (reflectPr (m) > 0) return Colour { 0, 0, 0 };
+      if (refractPr (m) > 0) return Colour { 0, 0, 0 };
+      return getPrimColour (prim, p) * diffusePr (m) / M_PI;
+  }
+
   void trace (Ray ray, VertexList& vertices) {
       size_t depth = 1;
       while (depth < 5) {
@@ -161,8 +173,8 @@ private: /* Methods: */
 
           const auto prim = intr.getPrimitive ();
           const auto m = m_scene.materials ()[prim->material()];
-          const auto objCol = m.colour();
           const auto point = intr.point();
+          const auto objCol = getPrimColour (prim, point);
           const auto V = ray.dir();
           const auto N = prim->normal (point);
           const auto internal = V.dot(N) > 0.0;
@@ -279,7 +291,7 @@ private: /* Methods: */
       vertices.reserve (RAY_MAX_REC_DEPTH);
       vertices.emplace_back (
         R.origin(), N, light->colour(), light->prim(),
-        1.0 / (2.0 * M_PI * N.dot (R.dir ())),
+        clamp (1.0 / (2.0 * M_PI * N.dot (R.dir ())), 0.0, 1.0),
         DIFFUSE
       );
       trace (R, vertices);
@@ -319,14 +331,14 @@ private: /* Methods: */
                   brdf0 = Colour { 1.0, 1.0, 1.0 } / M_PI;
               }
               else {
-                  brdf0 = brdf (getMat (lv.m_prim), lv.m_pos - lightVertices[s - 2].m_pos, ev.m_pos - lv.m_pos);
+                  brdf0 = brdf (lv.m_prim, lv.m_pos, lv.m_pos - lightVertices[s - 2].m_pos, ev.m_pos - lv.m_pos);
               }
 
               if (t == 1) {
-                  brdf1 = brdf (getMat (ev.m_prim), ev.m_pos - lv.m_pos, m_scene.camera ().eye () - ev.m_pos);
+                  brdf1 = brdf (ev.m_prim,  ev.m_pos, ev.m_pos - lv.m_pos, m_scene.camera ().eye () - ev.m_pos);
               }
               else {
-                  brdf1 = brdf (getMat (ev.m_prim), ev.m_pos - lv.m_pos, eyeVertices[t - 2].m_pos - ev.m_pos);
+                  brdf1 = brdf (ev.m_prim, ev.m_pos, ev.m_pos - lv.m_pos, eyeVertices[t - 2].m_pos - ev.m_pos);
               }
 
               c(s, t) = gcache (&lv, &ev) * brdf0 * brdf1;
@@ -433,11 +445,12 @@ private: /* Methods: */
         auto l = prim->as_light ();
         alpha_L[1] = (M_PI*l->colour()*l->emission()) / lightPA;
       }
-      if (NL >= 2)
-          alpha_L[2] = (1.0 / M_PI) / lightVertices[0].m_pr * alpha_L[1];
-      for (size_t i = 3; i <= NL; ++ i)
+      if (NL >= 2) {
+          alpha_L[2] = ((1.0 / M_PI) / lightVertices[0].m_pr) * alpha_L[1];
+      }
+      for (size_t i = 2; i <= NL; ++ i) {
           alpha_L[i] = (lightVertices[i - 2].m_col / lightVertices[i - 2].m_pr) * alpha_L[i - 1];
-
+      }
       return std::move (alpha_L);
   }
 

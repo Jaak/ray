@@ -55,10 +55,9 @@ public: /* Methods: */
   }
 
   const Colour getColourAtIntersection(const Point& point, const Texture* texture) const {
-    floating u, v;
-    Vector N = this->normal(point);
-    u = 0.5 + atan2(N.z, N.x) / (2 * M_PI);
-    v = 0.5 - asin(N.y) / M_PI;
+    const auto D = - this->normal(point);
+    const auto u = 0.5 + atan2(D.z, D.x) / (2 * M_PI);
+    const auto v = 0.5 - asin(D.y) / M_PI;
     return texture->getTexel(u, v);
   }
 
