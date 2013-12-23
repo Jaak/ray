@@ -55,7 +55,6 @@ set(INCLUDEFILES
   "${RAY_INCLUDE_DIR}/tga_surface.h"
   "${RAY_INCLUDE_DIR}/triangle.h"
   "${RAY_INCLUDE_DIR}/uniform_sampler.h"
-  "${RAY_INCLUDE_DIR}/vertex.h"
 )
 
 IF(GD_FOUND)

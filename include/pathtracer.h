@@ -10,20 +10,11 @@
 #include "ray.h"
 #include "scene.h"
 #include "table.h"
-#include "vertex.h"
 #include "renderer.h"
 
 #include <map>
 
 // TODO: i think that our material representation is all wrong...
-
-inline EventType getEventType (const Material& m) {
-    const auto total = m.kd () + m.ks () + m.t ();
-    const auto r = total*rng ();
-    if (r < m.kd ())           return DIFFUSE;
-    if (r < m.kd () + m.ks ()) return REFLECT;
-    return REFRACT;
-}
 
 inline floating diffusePr (const Material& m) {
     return m.kd () / (m.kd () + m.ks () + m.t ());
@@ -37,32 +28,63 @@ inline floating refractPr (const Material& m) {
     return m.t () / (m.kd () + m.ks () + m.t ());
 }
 
-inline floating generationPr (const Vertex* from, const Vertex* to) {
-    assert (from != nullptr && to != nullptr);
-    switch (from->m_event) {
-    case DIFFUSE: {
-        if (from->m_prim->is_light ()) {
-            const auto dir = normalised (to->m_pos - from->m_pos);
-            const auto cosT = from->m_normal.dot (dir);
-            return cosT <= 0.0 ? 0.0 : 1.0 / (2.0 * M_PI * cosT);
-        }
-        else {
-            return 1.0 / M_PI;
-        }
-    }
-    case REFLECT:
-    case REFRACT:
-        return 1.0;
-    case EYE:
-        return 0.0; // ??
-    }
-}
-
   /*****************************
    * Bidirectional path tracer *
    *****************************/
 
 class Pathtracer : public Renderer {
+public: /* Types: */
+
+  enum EventType {
+    DIFFUSE,
+    REFLECT,
+    REFRACT,
+    EYE
+  };
+
+  struct Vertex {
+    Point            m_pos;
+    Vector           m_normal;
+    Colour           m_col;
+    const Primitive* m_prim;
+    floating         m_pr;
+    EventType        m_event;
+
+    Vertex (const Point& pos, const Vector& normal, const Colour& col, const Primitive* prim, floating pr, EventType event)
+        : m_pos {pos}
+        , m_normal {normal}
+        , m_col {col}
+        , m_prim {prim}
+        , m_pr {pr}
+        , m_event {event}
+    { }
+  };
+
+  struct GeometricFactorCache : std::map<std::pair<const Vertex*, const Vertex*>, floating> {
+  public: /* Methods: */
+
+    explicit GeometricFactorCache (const Pathtracer& self)
+      : m_self (self)
+    { }
+
+    floating operator () (const Vertex* from, const Vertex* to) {
+      assert (from != nullptr && to != nullptr);
+      const auto k = std::make_pair (from, to);
+      auto it = find (k);
+      if (it == end ()) {
+        const auto factor = m_self.geometricFactor (*from, *to);
+        it = insert (it, std::make_pair (k, factor));
+      }
+
+      return it->second;
+    }
+
+  private: /* Fields: */
+    const Pathtracer& m_self;
+  };
+
+  using VertexList = std::vector<Vertex>;
+
 private: /* Methods: */
 
   Pathtracer& operator = (const Pathtracer&) = delete;
@@ -72,15 +94,43 @@ private: /* Methods: */
     return m_scene.manager().intersectWithPrims(ray);
   }
 
-  Ray shootRay(const Point& from, const Point& to) const {
+  static Ray shootRay(const Point& from, const Point& to) {
     return shootRay(from, to - from);
   }
 
-  Ray shootRay(const Point& from, Vector d) const {
+  static Ray shootRay(const Point& from, Vector d) {
     d.normalise();
     return { from + d*ray_epsilon, d };
   }
 
+  static inline EventType getEventType (const Material& m) {
+      const auto total = m.kd () + m.ks () + m.t ();
+      const auto r = total*rng ();
+      if (r < m.kd ())           return DIFFUSE;
+      if (r < m.kd () + m.ks ()) return REFLECT;
+      return REFRACT;
+  }
+
+  static inline floating generationPr (const Vertex* from, const Vertex* to) {
+      assert (from != nullptr && to != nullptr);
+      switch (from->m_event) {
+      case DIFFUSE: {
+          if (from->m_prim->is_light ()) {
+              const auto dir = normalised (to->m_pos - from->m_pos);
+              const auto cosT = from->m_normal.dot (dir);
+              return cosT <= 0.0 ? 0.0 : 1.0 / (2.0 * M_PI * cosT);
+          }
+          else {
+              return 1.0 / M_PI;
+          }
+      }
+      case REFLECT:
+      case REFRACT:
+          return 1.0;
+      case EYE:
+          return 0.0; // ??
+      }
+  }
 
   // Function G defined in Definition 8.3 in Veach's thesis
   floating geometricFactor(const Vertex& from, const Vertex& to) const {
@@ -104,29 +154,6 @@ private: /* Methods: */
       return 0.0;
     }
   }
-
-  struct GeometricFactorCache : std::map<std::pair<const Vertex*, const Vertex*>, floating> {
-  public: /* Methods: */
-    
-    explicit GeometricFactorCache (const Pathtracer& self)
-      : m_self (self)
-    { }
-
-    floating operator () (const Vertex* from, const Vertex* to) {
-      assert (from != nullptr && to != nullptr);
-      const auto k = std::make_pair (from, to);
-      auto it = find (k);
-      if (it == end ()) {
-        const auto factor = m_self.geometricFactor (*from, *to);
-        it = insert (it, std::make_pair (k, factor));
-      }
-
-      return it->second;
-    }
-
-  private: /* Fields: */
-    const Pathtracer& m_self;
-  };
 
 public: /* Methods: */
 
