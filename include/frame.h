@@ -8,6 +8,16 @@
  * Based on: https://github.com/SmallVCM/SmallVCM/blob/master/src/frame.hxx
  */
 class Frame {
+private:
+
+    struct Normalised { const Vector dir; };
+
+    explicit Frame (Normalised n)
+        : m_z { n.dir }
+        , m_y { pickOrthogonal (m_z) }
+        , m_x { m_y.cross (m_z) }
+    { }
+
 public: /* Methods: */
 
   Frame ()
@@ -36,8 +46,14 @@ public: /* Methods: */
   const Vector& tangent () const { return m_y; }
   const Vector& binormal () const { return m_z; }
 
+  // as the constructor normalises we can avoid redundant
+  // normalisations using this
+  static inline Frame fromNormalised (Vector dir) {
+      return Frame { Normalised { dir } };
+  }
+
 private: /* Fields: */
-  const Vector m_z, m_y, m_x;
+  Vector m_z, m_y, m_x;
 };
 
 #endif /* RAY_FRAME_H */

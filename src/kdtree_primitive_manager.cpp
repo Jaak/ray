@@ -139,7 +139,6 @@ floating Aabb::split(Aabb& left, Aabb& right, Axes axis) const {
   right.m_p1[axis] = left.m_p2[axis];
   return right.m_p1[axis];
 }
-;
 
 void Aabb::split_at(Aabb& left, Aabb& right, Axes axis, floating pos) const {
   left = right = *this;
@@ -172,7 +171,6 @@ floating getOptimalSplitPosition(const PrimList& plist, Aabb const& box, Axes& a
   const size_t len = plist.size ();
   std::vector<Split> splts(len * 2);
   Aabb left, right;
-  floating C = 1.0 / box.area();
   size_t lc, rc, j;
 
   floating bestCost = std::numeric_limits<floating>::max();
@@ -197,9 +195,9 @@ floating getOptimalSplitPosition(const PrimList& plist, Aabb const& box, Axes& a
       if (split.side == LEFT)
         ++lc;
 
-      floating pos = split.pos;
+      const auto pos = split.pos;
       box.split_at(left, right, i, pos);
-      floating cost = C * (left.area() * lc + right.area() * rc);
+      const auto cost = left.area() * lc + right.area() * rc;
 
       if (cost < bestCost) {
         bestCost = cost;

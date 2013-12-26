@@ -11,6 +11,7 @@
 #include "scene.h"
 #include "table.h"
 #include "renderer.h"
+#include "brdf.h"
 
 #include <map>
 
@@ -39,24 +40,27 @@ public: /* Types: */
     DIFFUSE,
     REFLECT,
     REFRACT,
-    EYE
+    LIGHT
   };
 
   struct Vertex {
     Point            m_pos;
     Vector           m_normal;
     Colour           m_col;
-    const Primitive* m_prim;
+    union {
+        const Primitive* m_prim;
+        const Light* m_light;
+    };
+
     floating         m_pr;
     EventType        m_event;
 
-    Vertex (const Point& pos, const Vector& normal, const Colour& col, const Primitive* prim, floating pr, EventType event)
-        : m_pos {pos}
-        , m_normal {normal}
-        , m_col {col}
-        , m_prim {prim}
-        , m_pr {pr}
-        , m_event {event}
+    Vertex (Point pos, Vector normal, Colour col, const Primitive* prim, floating pr, EventType event)
+        : m_pos {pos}, m_normal {normal}, m_col {col}, m_prim {prim}, m_pr {pr}, m_event {event}
+    { }
+
+    Vertex (Point pos, Vector normal, Colour col, const Light* light, floating pr, EventType event)
+        : m_pos {pos}, m_normal {normal}, m_col {col}, m_light {light}, m_pr {pr}, m_event {event}
     { }
   };
 
@@ -113,22 +117,20 @@ private: /* Methods: */
 
   static inline floating generationPr (const Vertex* from, const Vertex* to) {
       assert (from != nullptr && to != nullptr);
+
       switch (from->m_event) {
-      case DIFFUSE: {
-          if (from->m_prim->is_light ()) {
-              const auto dir = normalised (to->m_pos - from->m_pos);
-              const auto cosT = from->m_normal.dot (dir);
-              return cosT <= 0.0 ? 0.0 : 1.0 / (2.0 * M_PI * cosT);
-          }
-          else {
-              return 1.0 / M_PI;
-          }
-      }
+      case DIFFUSE:
+          return 1.0 / M_PI;
       case REFLECT:
       case REFRACT:
           return 1.0;
-      case EYE:
-          return 0.0; // ??
+      case LIGHT: {
+          // const auto dir = normalised (to->m_pos - from->m_pos);
+          // const auto cosT = from->m_normal.dot (dir);
+          // return cosT <= 0.0 ? 0.0 : 1.0 / (2.0 * M_PI * cosT);
+          const auto rad = from->m_light->radiance(from->m_pos, to->m_pos - from->m_pos);
+          return rad.emissionPdfW;
+          }
       }
   }
 
@@ -137,13 +139,13 @@ private: /* Methods: */
     const auto sqLen = (to.m_pos - from.m_pos).sqrlength();
     const auto from2to = normalised(to.m_pos - from.m_pos);
     const auto to2from = - from2to;
-    const auto testRay = Ray{ from.m_pos.nudgePoint(from2to), from2to};
     const auto cosT0 = from.m_normal.dot(from2to);
     const auto cosT1 = to.m_normal.dot(to2from);
 
     if (cosT0 <= 0.0) return 0.0;
     if (cosT1 <= 0.0) return 0.0;
 
+    const auto testRay = Ray{ from.m_pos.nudgePoint(from2to), from2to};
     const auto intr = intersectWithPrims(testRay);
     if (! intr.hasIntersections ())
         return 0.0;
@@ -185,8 +187,8 @@ private: /* Methods: */
   // TODO: proper brdf, this thing is a huge hack
   inline Colour brdf (const Primitive* prim, const Point& p, const Vector&, const Vector&) {
       const auto& m = getMat (prim);
-      if (reflectPr (m) > 0) return Colour { 0, 0, 0 };
-      if (refractPr (m) > 0) return Colour { 0, 0, 0 };
+      if (reflectPr (m) > 0.0) return Colour { 0, 0, 0 };
+      if (refractPr (m) > 0.0) return Colour { 0, 0, 0 };
       return getPrimColour (prim, p) * diffusePr (m) / M_PI;
   }
 
@@ -218,14 +220,16 @@ private: /* Methods: */
               pr = 1.0;
           }
 
-          if (prim->is_light ()) {
+          if (prim->emissive ()) {
               vertices.emplace_back (point, N2, objCol / M_PI, prim, pr / M_PI, DIFFUSE);
               return;
           }
 
           switch (getEventType (m)) {
           case DIFFUSE: {
-              const auto dir = rngHemisphereVector (N2);
+              const auto frame = Frame::fromNormalised (N2);
+              const auto sample = sampleCosHemisphere ();
+              const auto dir = frame.toWorld (sample.get ());
               vertices.emplace_back (point, N2, objCol / M_PI, prim, pr / M_PI, DIFFUSE);
               ray = shootRay (point, dir);
               break;
@@ -268,9 +272,6 @@ private: /* Methods: */
 
               break;
           }
-          case EYE:
-              assert (false && "No support for ray camera-lens intersections!");
-              break;
           }
 
           ++ depth;
@@ -295,10 +296,10 @@ private: /* Methods: */
 
   Light* pickLight () {
       floating acc = 0.0;
-      for (auto l : m_scene.lights()) {
+      for (const auto& l : m_scene.lights()) {
         acc += l->samplingPr();
         if (rng () <= acc) {
-          return l;
+          return l.get();
         }
       }
 
@@ -310,18 +311,18 @@ private: /* Methods: */
   VertexList traceLight (floating& lightPA) {
       assert (! m_scene.lights ().empty ());
       const auto light = pickLight ();
-      const auto R = light->sample ();
-      const auto N = light->prim()->normal(R.origin ());
-      lightPA = light->lightPA ();
-
+      const auto emission = light->emit ();
+      lightPA = emission.directPdfA;
       VertexList vertices;
       vertices.reserve (RAY_MAX_REC_DEPTH);
       vertices.emplace_back (
-        R.origin(), N, light->colour(), light->prim(),
-        clamp (1.0 / (2.0 * M_PI * N.dot (R.dir ())), 0.0, 1.0),
-        DIFFUSE
-      );
-      trace (R, vertices);
+        emission.position,
+        emission.normal,
+        emission.energy,
+        light,
+        clamp (1.0 / (2.0 * M_PI * emission.cosTheta), 0.0, 1.0),
+        LIGHT);
+      trace (shootRay(emission.position, emission.direction), vertices);
       return std::move (vertices);
   }
 
@@ -343,9 +344,9 @@ private: /* Methods: */
 
       for (size_t t = 1; t <= NE; ++ t) {
           const auto prim = eyeVertices[t - 1].m_prim;
-          if (prim && prim->is_light ()) {
-            const auto l = prim->as_light ();
-            c(0, t) = eyeVertices[t - 1].m_col*l->emission();
+          if (prim && prim->emissive ()) {
+            const auto l = prim->getLight ();
+            c(0, t) = eyeVertices[t - 1].m_col*l->intensity();
           }
       }
 
@@ -467,15 +468,12 @@ private: /* Methods: */
       alpha_L[0] = Colour { 1.0, 1.0, 1.0 };
 
       if (NL >= 1) {
-        auto prim = lightVertices[0].m_prim;
-        assert (prim->is_light());
-        auto l = prim->as_light ();
-        alpha_L[1] = (M_PI*l->colour()*l->emission()) / lightPA;
+        alpha_L[1] = (M_PI*lightVertices[0].m_col) / lightPA;
       }
       if (NL >= 2) {
           alpha_L[2] = ((1.0 / M_PI) / lightVertices[0].m_pr) * alpha_L[1];
       }
-      for (size_t i = 2; i <= NL; ++ i) {
+      for (size_t i = 3; i <= NL; ++ i) {
           alpha_L[i] = (lightVertices[i - 2].m_col / lightVertices[i - 2].m_pr) * alpha_L[i - 1];
       }
       return std::move (alpha_L);

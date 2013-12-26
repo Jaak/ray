@@ -8,9 +8,7 @@ unsigned long long icount = 0;
 
 NaivePrimitiveManager::~NaivePrimitiveManager() {
     for (auto p : m_prims) {
-        if (! p->is_light ()) {
-            delete p;
-        }
+        delete p;
     }
 
     std::cout << "Intersections : " << icount << std::endl;

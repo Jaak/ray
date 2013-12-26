@@ -7,6 +7,7 @@
 #include "sdl_surface.h"
 #include "tga_surface.h"
 #include "uniform_sampler.h"
+#include "vcm.h"
 
 #ifdef HAVE_GD_SUPPORT_PNG
   #include "png_surface.h"
@@ -27,6 +28,7 @@ void parseCommandLine(int argc, char** argv, po::options_description& desc, po::
 #endif
     ("tga",       po::value<std::string>(), "Output TGA image")
     ("bpt",                                 "Use bidirection path tracer")
+    ("vcm",                                 "Use vertex connecting and merging")
     ("samples,s", po::value<size_t>(),      "Number of samples per pixel")
     ("input,i",   po::value<std::string>(), "Input NFF file")
     ("non-interactive",                     "Don't render interactively");
@@ -48,9 +50,6 @@ void parseCommandLine(int argc, char** argv, po::options_description& desc, po::
  *  - The first step in implementing better importer is to rename SceneReader to SceneImporter
  *    and make it an actual virtual class. The importer should just implement various virtual
  *    methods that builds the scene.
- *  - We can compute if the intersection was internal or external from ray direction and the normal...
- *  - Move operator<< implementations to cpp files. this way it's sufficient to include <iosfwd>
- *  - The code is still not quite C++11 idiomatic.
  */
 
 int main(int argc, char** argv) {
@@ -75,22 +74,43 @@ int main(int argc, char** argv) {
     return EXIT_FAILURE;
   }
 
-  if (vm.count("non-interactive") == 0) {
-    scene.attachSurface(new SDLSurface());
+  /*******************
+   * Select renderer *
+   *******************/
+
+  if (!!vm.count("bpt") + !!vm.count("vcm") > 1) {
+    std::cerr << "Can only select one renderer type." << std::endl;
+    std::cerr << desc << std::endl;
+    return EXIT_FAILURE;
   }
 
-  if (vm.count("bpt") == 0) {
-    scene.setRenderer(new Raytracer (scene));
-  }
-  else {
+  if (vm.count("bpt") != 0) {
     scene.setRenderer(new Pathtracer (scene));
   }
+  else if (vm.count("vcm") != 0) {
+    scene.setRenderer(new VCMRenderer(scene));
+  }
+  else {
+    scene.setRenderer(new Raytracer (scene));
+  }
+
+  /******************
+   * Select sampler *
+   ******************/
 
   if (vm.count("samples") == 0) {
-    scene.setSampler(new UniformSampler(5));
+    scene.setSampler(new UniformSampler(1));
   }
   else {
     scene.setSampler(new UniformSampler(vm["samples"].as<size_t>()));
+  }
+
+  /*****************
+   * Select output *
+   *****************/
+
+  if (vm.count("non-interactive") == 0) {
+    scene.attachSurface(new SDLSurface());
   }
 
 #ifdef HAVE_GD_SUPPORT_PNG

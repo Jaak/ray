@@ -115,11 +115,10 @@ void do_regular_light(Scene &scene, FILE *fp) {
       exit(1);
     }
 
-    const auto emission = luminance(r, g, b);
-    const auto col = Colour(r, g, b) / emission;
-    const auto mat = Material{ col };
-    Light* light = new PointLight(Point(x, y, z), col, emission);
-    light->prim()->setMaterial(scene.materials().registerMaterial(mat));
+    const auto intensity = Colour{r, g, b};
+    const auto pos = Point{x, y, z};
+
+    Light* light = new PointLight{scene.sceneSphere(), intensity, pos};
     scene.addLight(light);
 }
 
@@ -131,11 +130,16 @@ void do_sphere_light(Scene &scene, FILE *fp) {
       exit(1);
     }
 
-    const auto emission = luminance(r, g, b);
-    const auto col = Colour(r, g, b) / emission;
-    const auto mat = Material{ col };
-    Light* light = new SphereLight{ Point{ x, y, z }, R, col, emission };
-    light->prim()->setMaterial(scene.materials().registerMaterial(mat));
+    const auto intensity = Colour{r, g, b};
+    const auto pos = Point{x, y, z};
+    const floating rad = R;
+    const auto mat = Material{ intensity };
+
+    Light* light = new SphereLight{scene.sceneSphere(), intensity,  pos, rad};
+    Primitive* prim = new Sphere{pos, rad};
+    prim->setMaterial(scene.materials().registerMaterial(mat));
+    prim->setLight(light);
+    scene.addPrimitive(prim);
     scene.addLight(light);
 }
 
@@ -148,38 +152,34 @@ void do_area_light (Scene& scene, FILE* fp) {
         exit (1);
     }
 
-    const auto emission = luminance(r, g, b);
-    const auto col = Colour(r, g, b) / emission;
-    const auto mat = Material{ col };
-    Light* light = new AreaLight {
-      Point { x, y, z},
-      Vector { ux, uy, uz },
-      Vector { vx, vy, vz },
-      col,
-      emission
-    };
-    light->prim()->setMaterial(scene.materials().registerMaterial(mat));
-    scene.addLight (light);
+    const auto intensity = Colour {r, g, b};
+    const auto mat = Material {intensity};
+    const auto pos = Point {x, y, z};
+    const auto u = Vector {ux, uy, uz};
+    const auto v = Vector {vx, vy, vz};
+
+    Light* light = new AreaLight {scene.sceneSphere(), intensity, pos, u, v};
+    Primitive* prim = new Rectangle {pos, u, v};
+    prim->setMaterial(scene.materials().registerMaterial(mat));
+    prim->setLight(light);
+    scene.addPrimitive(prim);
+    scene.addLight(light);
 }
 
 void do_spotlight (Scene& scene, FILE* fp) {
-    float x, y, z, sr, dx, dy, dz, a, r = 1.0, g = 1.0, b = 1.0;
-    const auto n = fscanf(fp, "%f %f %f %f %f %f %f %f %f %f %f",
-      &x, &y, &z, &sr, &dx, &dy, &dz, &a, &r, &g, &b);
-    if (n != 11 && n != 8) {
+    float x, y, z, dx, dy, dz, a, r = 1.0, g = 1.0, b = 1.0;
+    const auto n = fscanf(fp, "%f %f %f %f %f %f %f %f %f %f",
+      &x, &y, &z, &dx, &dy, &dz, &a, &r, &g, &b);
+    if (n != 10 && n != 7) {
         show_error ("Spotlight source syntax error");
         exit (1);
     }
 
-    const auto emission = luminance(r, g, b);
-    const auto col = Colour(r, g, b) / emission;
-    const auto mat = Material{ col };
-    Light* light = new Spotlight {
-      Point { x, y, z}, sr,
-      Vector { dx, dy, dz },
-      a, col, emission
-    };
-    light->prim()->setMaterial(scene.materials().registerMaterial(mat));
+    const auto intensity = Colour {r, g, b};
+    const auto pos = Point {x, y, z};
+    const auto dir = Vector {dx, dy, dz};
+    const floating alpha = a * M_PI / 180.0;
+    Light* light = new Spotlight {scene.sceneSphere(), intensity, pos, dir, alpha};
     scene.addLight (light);
 }
 
@@ -202,7 +202,7 @@ void do_light(Scene& scene, FILE* fp) {
     do_spotlight (scene, fp);
     return;
   }
-  
+
   ungetc(c, fp);
   do_regular_light (scene, fp);
 }
@@ -352,36 +352,39 @@ void do_poly(Scene& scene, FILE* fp) {
   /* XXX Naíve */
   for (int i = 1; i < nverts - 1; ++i) {
     Primitive* p;
+    const auto p0 = 0;
+    const auto p1 = i;
+    const auto p2 = i + 1;
 
     if (ispatch && textured) {
       p = new ITriangle(
-          Point(verts[0][0], verts[0][1], verts[0][2], UVs[0][0], UVs[0][1]),
-          Point(verts[i][0], verts[i][1], verts[i][2], UVs[i][0], UVs[i][1]),
-          Point(verts[i + 1][0], verts[i + 1][1], verts[i + 1][2], UVs[i + 1][0], UVs[i + 1][1]),
-          Vector(norms[0][0], norms[0][1], norms[0][2]),
-          Vector(norms[i][0], norms[i][1], norms[i][2]),
-          Vector(norms[i + 1][0], norms[i + 1][1], norms[i + 1][2]));  
+          Point(verts[p0][0], verts[p0][1], verts[p0][2], UVs[p0][0], UVs[p0][1]),
+          Point(verts[p1][0], verts[p1][1], verts[p1][2], UVs[p1][0], UVs[p1][1]),
+          Point(verts[p2][0], verts[p2][1], verts[p2][2], UVs[p2][0], UVs[p2][1]),
+          Vector(norms[p0][0], norms[p0][1], norms[p0][2]),
+          Vector(norms[p1][0], norms[p1][1], norms[p1][2]),
+          Vector(norms[p2][0], norms[p2][1], norms[p2][2]));
     }
     else if (ispatch) {
       p = new ITriangle(
-          Point(verts[0][0], verts[0][1], verts[0][2]),
-          Point(verts[i][0], verts[i][1], verts[i][2]),
-          Point(verts[i + 1][0], verts[i + 1][1], verts[i + 1][2]),
-          Vector(norms[0][0], norms[0][1], norms[0][2]),
-          Vector(norms[i][0], norms[i][1], norms[i][2]),
-          Vector(norms[i + 1][0], norms[i + 1][1], norms[i + 1][2]));
-    } 
+          Point(verts[p0][0], verts[p0][1], verts[p0][2]),
+          Point(verts[p1][0], verts[p1][1], verts[p1][2]),
+          Point(verts[p2][0], verts[p2][1], verts[p2][2]),
+          Vector(norms[p0][0], norms[p0][1], norms[p0][2]),
+          Vector(norms[p1][0], norms[p1][1], norms[p1][2]),
+          Vector(norms[p2][0], norms[p2][1], norms[p2][2]));
+    }
     else if (textured) {
       p = new Triangle(
-          Point(verts[0][0], verts[0][1], verts[0][2], UVs[0][0], UVs[0][1]),
-          Point(verts[i][0], verts[i][1], verts[i][2], UVs[i][0], UVs[i][1]),
-          Point(verts[i + 1][0], verts[i + 1][1], verts[i + 1][2], UVs[i + 1][0], UVs[i + 1][1]));
+          Point(verts[p0][0], verts[p0][1], verts[p0][2], UVs[p0][0], UVs[p0][1]),
+          Point(verts[p1][0], verts[p1][1], verts[p1][2], UVs[p1][0], UVs[p1][1]),
+          Point(verts[p2][0], verts[p2][1], verts[p2][2], UVs[p2][0], UVs[p2][1]));
     }
     else {
       p = new Triangle(
-          Point(verts[0][0], verts[0][1], verts[0][2]),
-          Point(verts[i][0], verts[i][1], verts[i][2]),
-          Point(verts[i + 1][0], verts[i + 1][1], verts[i + 1][2]));
+          Point(verts[p0][0], verts[p0][1], verts[p0][2]),
+          Point(verts[p1][0], verts[p1][1], verts[p1][2]),
+          Point(verts[p2][0], verts[p2][1], verts[p2][2]));
     }
 
     p->setMaterial(current_material);

@@ -17,9 +17,8 @@
 class Sphere : public Primitive {
 public: /* Methods: */
 
-  Sphere(const Point& c, floating r, bool is_light = false)
-    : Primitive (is_light)
-    , m_center(c)
+  Sphere(const Point& c, floating r)
+    : m_center(c)
     , m_radius(r)
     , m_sqrradius(r*r)
   { }

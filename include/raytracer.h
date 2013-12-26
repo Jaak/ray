@@ -49,16 +49,23 @@ private: /* Methods: */
 
   // TODO: giant hack, we just sample a single point on the light source
   // and if the point isnt visible we are completely in shadow.
-  floating getShade(const Light* l, Point point, Vector& L) {
-    const auto p = l->sample ().origin ();
-    const auto ray = shootRay(point, p);
-    L = normalised(p - point);
-    const auto intr = intersectWithPrims(ray);
-    if (intr.hasIntersections() && intr.getPrimitive()->is_light()) {
-      return 1.0;
-    }
+  Colour getShade(const Light* l, Point point, Vector& L) {
+      const auto illumination = l->illuminate (point);
+      L = illumination.direction;
+      const auto ray = shootRay (point, illumination.direction);
+      const auto intr = intersectWithPrims (ray);
+      if (l->isDelta ()) {
+        if (intr.hasIntersections () && intr.dist () < illumination.distance)
+            return {0, 0, 0};
 
-    return 0.0;
+        return illumination.radiance;
+      }
+      else {
+          if (intr.hasIntersections() && fabs (intr.dist() - illumination.distance) < 2.0*epsilon)
+            return illumination.radiance;
+
+          return {0, 0, 0};
+      }
   }
 
   Colour run(const Ray& ray, size_t depth = 1, floating iior = 1.0) {
@@ -90,8 +97,8 @@ private: /* Methods: */
     const auto prim = intr.getPrimitive ();
     const Material& m = m_scene.materials ()[prim->material()];
 
-    if (prim->is_light()) {
-      return Colour {1, 1, 1};
+    if (prim->emissive ()) {
+      return prim->getLight ()->intensity ();
     }
 
     const auto point = intr.point();
@@ -102,17 +109,13 @@ private: /* Methods: */
 
     auto col = Colour { 0, 0, 0 };
 
-    for (const Light* l : m_scene.lights()) {
+    for (const auto& l : m_scene.lights()) {
       Vector L;
-      auto shade = getShade(l, point, L);
-      if (almost_zero(shade)) {
-        continue;
-      }
-
+      auto shade = getShade(l.get(), point, L);
       const auto R = reflect (L, N);
       const auto diff = m.kd () * clamp (L.dot(N), 0, 1);
       const auto spec = m.ks () * pow(clamp(V.dot(R), 0, 1), m.phong_pow());
-      col += (diff + spec) * getPrimColour (prim, point) * l->colour();
+      col += shade*(diff + spec) * getPrimColour (prim, point);
     }
 
     // reflection

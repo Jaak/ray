@@ -6,36 +6,69 @@
 #include "random.h"
 #include "rectangle.h"
 
-class AreaLight : public Rectangle, public Light {
+class AreaLight : public Light {
 public: /* Methods: */
 
-  AreaLight (Point p, Vector u, Vector v, Colour c, floating emission = 1.0)
-    : Rectangle { p, u, v, true }
-    , Light { c, emission }
-  { }
+    AreaLight (const SceneSphere& sceneSphere, Colour intensity, Point p, Vector u, Vector v)
+        : Light {sceneSphere, intensity, true, false}
+        , m_point {p}
+        , m_u {u}
+        , m_v {v}
+    {
+        auto normal = u.cross (v);
+        const auto len = normal.length (); // same as area
+        normal = normal / len;
+        m_frame = Frame::fromNormalised (normal);
+        m_invArea = 1.0 / len;
+    }
 
-  AreaLight(const Rectangle& rect, const Colour& c, floating emission = 1.0)
-    : Rectangle(rect), Light { c, emission }
-  { }
+    IlluminateResult illuminate (Point pos) const override {
+        const auto pointOnRectangle = m_point + rng () * m_u + rng () * m_v;
+        auto direction = pointOnRectangle - pos;
+        const auto distSqr = direction.sqrlength ();
+        const auto distance = std::sqrt (distSqr);
+        direction = direction / distance;
+        const auto cosNormal = m_frame.normal () . dot(- direction);
 
-  const Primitive* prim () const { return this; }
-  const Light* as_light () const { return this; }
+        if (cosNormal < epsilon)
+            return {};
 
-  Ray sample() const {
-    const auto h = rng();
-    const auto k = rng();
-    const auto P = m_point + h * m_u + k * m_v;
-    const auto V = rngHemisphereVector (m_normal);
-    return { P + ray_epsilon * m_normal, V };
-  }
+        const auto directPdfW = m_invArea * distSqr / cosNormal;
+        const auto emissionPdfW = m_invArea * cosNormal / M_PI;
+        return {intensity (), direction, distance, directPdfW, emissionPdfW, cosNormal};
+    }
 
-  floating lightPA () const {
-      const auto area = m_u.length () * m_v.length ();
-      if (area < epsilon)
-          return 1.0;
+    EmitResult emit () const override {
+        const auto sample = sampleCosHemisphere ();
+        const auto localDir = sample.get ();
+        const auto cosTheta = localDir.z;
+        if (cosTheta < epsilon) // try again if angle is too steep
+            return emit ();
 
-      return 1.0 / area;
-  }
+        const auto pointOnRectangle = m_point + rng () * m_u + rng () * m_v;
+        const auto direction = m_frame.toWorld (localDir);
+        const auto emissionPdfW = m_invArea * sample.pdfW();
+        const auto directPdfA = m_invArea;
+        return {cosTheta * intensity (), pointOnRectangle,
+                m_frame.normal (), direction,
+                emissionPdfW, directPdfA, cosTheta
+        };
+    }
+
+    RadianceResult radiance (Point, Vector dir) const override {
+        const auto cosNormal = m_frame.normal ().dot (- dir);
+        if (cosNormal < epsilon)
+            return {};
+
+        return {intensity (), m_invArea * cosNormal / M_PI, m_invArea};
+    }
+
+private: /* Fields: */
+    const Point     m_point;
+    const Vector    m_u;
+    const Vector    m_v;
+    Frame           m_frame;
+    floating        m_invArea;
 };
 
 #endif

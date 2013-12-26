@@ -7,11 +7,14 @@ Camera::Camera() { }
 
 // TODO: init methods are bad
 void Camera::init() {
-  const Vector t = (m_at - m_eye).normalise();
+  const auto t = m_at - m_eye;
+  m_forward = normalised (t);
   m_right = t.cross(m_up).normalise();
   m_up = m_right.cross(t).normalise();
 
-  floating a = tan((m_fov * M_PI) / 360) * ((m_at - m_eye).length());
+  floating tanHalfAngle = tan((m_fov * M_PI) / 360);
+  floating a = tanHalfAngle * (t.length());
+  m_imagePlaneDistance = m_width / (2.0 * tanHalfAngle);
   m_right = a * m_right;
   m_up = a * m_up;
 }

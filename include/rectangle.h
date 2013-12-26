@@ -22,9 +22,8 @@ private: /* Methods: */
 
 public:
 
-  Rectangle(const Point& point, const Vector& u, const Vector& v, bool isLight = false)
-    : Primitive { isLight }
-    , m_point { point }
+  Rectangle(const Point& point, const Vector& u, const Vector& v)
+    : m_point { point }
     , m_u { u }
     , m_v { v }
     , m_normal { normalised (u.cross (v)) }

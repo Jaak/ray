@@ -148,14 +148,14 @@ void Scene::init() {
   }
 
   floating acc = 0.0;
-  for (auto light : m_lights) {
-    acc += light->emission ();
+  for (auto& light : m_lights) {
+    acc += luminance (light->intensity ());
   }
 
   if (acc > 0.0) {
     acc = 1.0 / acc;
-    for (auto light : m_lights) {
-      light->setSamplingPr(light->emission()*acc);
+    for (auto& light : m_lights) {
+      light->setSamplingPr(luminance (light->intensity())*acc);
     }
   }
 
@@ -167,12 +167,9 @@ void Scene::init() {
 
 void Scene::addPrimitive(const Primitive* p) { m_manager->addPrimitive(p); }
 
-void Scene::addLight(Light* l) {
-    m_lights.push_back(l);
-    addPrimitive (l->prim ());
-}
+void Scene::addLight(Light* l) { m_lights.emplace_back (l); }
 
-const std::vector<Light*>& Scene::lights() const { return m_lights; }
+const std::vector<std::unique_ptr<Light>>& Scene::lights() const { return m_lights; }
 
 void Scene::run() {
   using namespace boost::posix_time;

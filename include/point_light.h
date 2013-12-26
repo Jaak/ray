@@ -4,66 +4,91 @@
 #include "geometry.h"
 #include "light.h"
 #include "random.h"
-#include "sphere.h"
 
-/**
- * TODO: figure out why setting the radius to epsilon or
- * zero causes massive rendering errors.
- */
 
-/**
- * Point lights are just SphereLight's with really small radius.
- * We are not reusing SphereLight-s class as we can provide more efficient
- * and accurate implementation for sampling.
- */
-class PointLight : public Sphere, public Light {
+class PointLight: public Light {
 public: /* Methods: */
 
-  PointLight(const Point& p, const Colour& c = Colour { 1, 1, 1}, floating emission = 1.0)
-    : Sphere(p, 0.01, true), Light(c, emission)
-  {}
-
-  const Primitive* prim () const { return this; }
-  const Light* as_light () const { return this; }
-
-  Ray sample () const {
-    return { center(), rngSphere ()};
-  }
-
-  floating lightPA () const {
-      return 1.0;
-  }
-};
-
-/**
- * Spherical light does not emit directed light.
- * Light rays are sampled as follows:
- * 1) pick random point on the surface of the light source
- * 2) pick random direction on hemisphere pointing away from the picked point
- */
-class SphereLight : public Sphere, public Light {
-public: /* Methods: */
-
-    SphereLight(const Point& p, floating r, const Colour& c = Colour{1,1,1}, floating emission = 1.0)
-      : Sphere(p, r, true), Light(c, emission)
+    PointLight(const SceneSphere& sceneSphere, Colour intensity, Point pos)
+        : Light {sceneSphere, intensity, true, true}
+        , m_position { pos }
     {}
 
-    const Primitive* prim () const { return this; }
-    const Light* as_light () const { return this; }
-
-    Ray sample () const {
-        const auto normal = rngSphere ();
-        const auto point = center () + radius ()*normal;
-        const auto dir = rngHemisphereVector (normal);
-        return { point.nudgePoint (dir), dir };
+    IlluminateResult illuminate (Point pos) const override {
+        Vector direction = m_position - pos;
+        const floating distSqr = direction.sqrlength ();
+        const floating distance = std::sqrt (distSqr);
+        direction = direction / distance;
+        return { intensity (), direction, distance, distSqr, uniformSpherePdfW(), 1.0 };
     }
 
-    floating lightPA () const {
-        if (radius () < epsilon)
-            return 1.0;
-
-        return 1.0 / (4.0 * M_PI * m_sqrradius);
+    EmitResult emit () const override {
+        const auto sample = sampleUniformSphere ();
+        return { intensity (), m_position, sample.get (), sample.get(), sample.pdfW(), 1.0, 1.0 };
     }
+
+    RadianceResult radiance (Point, Vector) const override {
+        return {{0, 0, 0}, 1.0 / (M_PI * 4.0), 1.0};
+    }
+
+private: /* Fields: */
+    const Point m_position;
+};
+
+class SphereLight: public Light {
+public: /* Methods: */
+
+    SphereLight(const SceneSphere& sceneSphere, Colour intensity, Point center, floating r)
+      : Light {sceneSphere, intensity, true, false}
+      , m_center { center }
+      , m_radius { r }
+      , m_invArea { 1.0 / (4.0 * M_PI * r * r) }
+    {}
+
+    IlluminateResult illuminate (Point pos) const override {
+        const auto localPosVec = sampleUniformSphere ().get ();
+        const auto pointOnSphere = m_center + m_radius * localPosVec;
+        auto direction = pointOnSphere - pos;
+        const auto distSqr = direction.sqrlength ();
+        const auto distance = std::sqrt (distSqr);
+        direction = direction / distance;
+        const auto cosNormal = normalised(pointOnSphere - m_center) . dot(- direction);
+
+        if (cosNormal < 0.0)
+            return {};
+
+        const auto directPdfW = m_invArea * distSqr / cosNormal;
+        const auto emissionPdfW = m_invArea * cosNormal / M_PI;
+        return {intensity (), direction, distance, directPdfW, emissionPdfW, cosNormal};
+    }
+
+    EmitResult emit () const override {
+        const auto localPosVec = sampleUniformSphere().get();
+        const auto pointOnSphere = m_center + m_radius * localPosVec;
+        const auto normal = normalised (pointOnSphere - m_center);
+        const auto frame = Frame::fromNormalised (normal);
+        const auto sample = sampleCosHemisphere (); // TODO: do we need to reject < epsilon cosTheta?
+        const auto localDir = sample.get ();
+        const auto cosTheta = localDir.z;
+        const auto direction = frame.toWorld (localDir);
+        const auto emissionPdfW = m_invArea * sample.pdfW ();
+        const auto directPdfA = m_invArea;
+        return {cosTheta * intensity (), pointOnSphere, normal, direction, emissionPdfW, directPdfA, cosTheta};
+    }
+
+    RadianceResult radiance (Point pos, Vector dir) const override {
+        const auto normal = normalised (pos - m_center);
+        const auto cosTheta = normal.dot (- dir);
+        if (cosTheta < 0.0)
+            return {};
+
+        return {intensity (), m_invArea * cosHemispherePdfW (normal, - dir), m_invArea};
+    }
+
+private: /* Fields: */
+    const Point    m_center;
+    const floating m_radius;
+    const floating m_invArea; // this is the pdf of sampling on sphere uniformly
 };
 
 #endif

@@ -2,50 +2,51 @@
 #define RAY_SPOTLIGHT_H
 
 #include "light.h"
-#include "sphere_cap.h"
 #include "random.h"
 
-/// Directional light source.
-class Spotlight : public SphereCap, public Light {
+class Spotlight : public Light {
 public: /* Methods: */
 
-  Spotlight(const Point& p, float r, const Vector& d, float a, const Colour& c, floating emission = 1.0)
-    : SphereCap(p, r, d, a, true)
-    , Light(c,emission)
-    {}
+    Spotlight (const SceneSphere& sceneSphere, Colour intensity, const Point& p, const Vector& d, floating a)
+        : Light {sceneSphere, intensity, true, true}
+        , m_position {p}
+        , m_frame {d}
+        , m_cosAngle {clamp (cos (a), 0, 1)}
+        , m_emissionPdfW {1.0 / (2.0 * M_PI * (1.0 - m_cosAngle)) }
+    { }
 
-  Spotlight(const Point& p, const float r, const Vector& d, float a, floating emission = 1.0)
-    : SphereCap(p, r, d, a, true)
-    , Light(Colour(1, 1, 1), emission)
-    {}
+    virtual IlluminateResult illuminate (Point pos) const override {
+        Vector direction = m_position - pos;
+        const floating distSqr = direction.sqrlength ();
+        const floating distance = std::sqrt (distSqr);
+        direction = direction / distance;
 
-  const Primitive* prim () const { return this; }
-  const Light* as_light () const { return this; }
+        if (m_frame.normal().dot(-direction) < m_cosAngle)
+            return {};
 
-
-
-
-  Ray sample () const {
-    
-    auto H = Vector {0, 0, 0};
-    while (true) {
-      H = rngHemisphere ();
-      if (H.z >= cos (m_angle))
-        break;
+        return {intensity (), direction, distance, distSqr, m_emissionPdfW, 1.0};
     }
 
-    const auto D = Frame { m_direction }.toWorld (H);
-    const auto P = center () + radius () * D;
+    virtual EmitResult emit () const override {
+        auto dir = Vector {0, 0, 0};
+        while (true) {
+            dir = sampleUniformHemisphere ().get ();
+            if (dir.z >= m_cosAngle)
+                break;
+        }
 
-    return {P.nudgePoint (P), D};
-  }
+        return {intensity (), m_position, m_frame.normal (), dir, m_emissionPdfW, 1.0, 1.0};
+    }
 
-  floating lightPA () const {
-    floating h = m_radius * (1.0 - cos(m_angle));
-    floating area = 2 * M_PI * m_radius * h;
-    return 1.0 / area;
-  }
+    virtual RadianceResult radiance (Point, Vector) const override {
+        return {{0, 0, 0}, m_emissionPdfW, 1.0};
+    }
 
+private: /* Fields: */
+    const Point     m_position;
+    const Frame     m_frame;
+    const floating  m_cosAngle;
+    const floating  m_emissionPdfW;
 };
 
 #endif

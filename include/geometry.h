@@ -28,6 +28,31 @@ inline std::ostream& operator<<(std::ostream& os, Axes ax) {
   return os;
 }
 
+/*************
+ * 2d vector *
+ **************/
+
+class Vector2 {
+public: /* Methods: */
+
+    Vector2 () { }
+
+    Vector2 (floating x, floating y)
+        : x(x), y(y)
+    { }
+
+    floating& operator[](size_t i) { return data[i]; }
+    floating operator[](size_t i) const { return data[i]; }
+    floating& operator[](Axes i) { return data[static_cast<unsigned>(i)]; }
+    floating operator[](Axes i) const { return data[static_cast<unsigned>(i)]; }
+
+public: /* Fields: */
+  union {
+    floating data[2];
+    struct { floating x, y; };
+  };
+};
+
 /************************
  * 4 dimensional vector *
  ************************/
@@ -38,7 +63,8 @@ public: /* Methods: */
   Vector() {}
 
   Vector(floating x, floating y, floating z, floating w = 0.0)
-    : data{ x, y, z, w } {}
+    : data{ x, y, z, w }
+  {}
 
   floating& operator[](size_t i) { return data[i]; }
   floating operator[](size_t i) const { return data[i]; }
@@ -193,6 +219,160 @@ inline Point Point::nudgePoint(const Vector& v) const {
   return *this + ray_epsilon * v;
 }
 
+/**********************
+ * Translation matrix *
+ **********************/
+
+class Matrix {
+public: /* Methods: */
+
+    Matrix () { }
+
+    Matrix (floating v)
+        : m_data {v, v, v, v, v, v, v, v, v, v, v, v, v, v, v, v}
+    { }
+
+    Matrix (floating m00, floating m01, floating m02, floating m03,
+            floating m10, floating m11, floating m12, floating m13,
+            floating m20, floating m21, floating m22, floating m23,
+            floating m30, floating m31, floating m32, floating m33)
+        : m_data {m00, m01, m02, m03, m10, m11, m12, m13, m20, m21, m22, m23, m30, m31, m32, m33}
+    { }
+
+    floating& operator[](size_t i) { return m_data[i]; }
+    floating operator[](size_t i) const { return m_data[i]; }
+
+    floating& operator () (size_t i, size_t j) { return m_data[i + 4*j]; }
+    floating operator () (size_t i, size_t j) const { return m_data[i + 4*j]; }
+
+    Vector transform (Vector vec) const {
+        auto result = Vector {0, 0, 0};
+        const auto& self = *this;
+        for (size_t i = 0; i < 3; ++ i) {
+            for (size_t j = 0; i < 3; ++ j) {
+                result[i] += vec[j]*self(i, j);
+            }
+        }
+
+        return result;
+    }
+
+    Point transform (Point p) const {
+        const auto& self = *this;
+        const auto iw = 1.0 / (self(3, 0)*p[0] + self(3, 1)*p[1] + self(3,2)*p[2] + self(3,3));
+        auto result = Point {0, 0, 0};
+        for (size_t i = 0; i < 3; ++ i) {
+            result[i] = self(i, 3);
+            for (size_t j = 0; j < 3; ++ j) {
+                result[i] += p[j] * self(i, j);
+            }
+
+            result[i] *= iw;
+        }
+
+        return result;
+    }
+
+    friend Matrix operator * (const Matrix& m1, const Matrix& m2) {
+        auto result = Matrix {0};
+        for (size_t r = 0; r < 4; ++ r)
+            for (size_t c = 0; c < 4; ++ c)
+                for (size_t i = 0; i < 4; ++ i)
+                    result(r, c) += m1(r, i) * m2(i, c);
+        return result;
+    }
+
+    // http://stackoverflow.com/questions/1148309/inverting-a-4x4-matrix
+    friend Matrix invert (const Matrix& m) {
+        auto inv = Matrix {};
+
+        inv[0] = m[5] * m[10] * m[15] - m[5] * m[11] * m[14] - m[9] * m[6] * m[15] + m[9] * m[7] * m[14] + m[13] * m[6] * m[11] - m[13] * m[7] * m[10];
+        inv[4] = -m[4] * m[10] * m[15] + m[4] * m[11] * m[14] + m[8] * m[6] * m[15] - m[8] * m[7] * m[14] - m[12] * m[6] * m[11] + m[12] * m[7] * m[10];
+        inv[8] = m[4] * m[9] * m[15] - m[4] * m[11] * m[13] - m[8] * m[5] * m[15] + m[8] * m[7] * m[13] + m[12] * m[5] * m[11] - m[12] * m[7] * m[9];
+        inv[12] = -m[4] * m[9] * m[14] + m[4] * m[10] * m[13] + m[8] * m[5] * m[14] - m[8] * m[6] * m[13] - m[12] * m[5] * m[10] + m[12] * m[6] * m[9];
+        inv[1] = -m[1] * m[10] * m[15] + m[1] * m[11] * m[14] + m[9] * m[2] * m[15] - m[9] * m[3] * m[14] - m[13] * m[2] * m[11] + m[13] * m[3] * m[10];
+        inv[5] = m[0] * m[10] * m[15] - m[0] * m[11] * m[14] - m[8] * m[2] * m[15] + m[8] * m[3] * m[14] + m[12] * m[2] * m[11] - m[12] * m[3] * m[10];
+        inv[9] = -m[0] * m[9] * m[15] + m[0] * m[11] * m[13] + m[8] * m[1] * m[15] - m[8] * m[3] * m[13] - m[12] * m[1] * m[11] + m[12] * m[3] * m[9];
+        inv[13] = m[0] * m[9] * m[14] - m[0] * m[10] * m[13] - m[8] * m[1] * m[14] + m[8] * m[2] * m[13] + m[12] * m[1] * m[10] - m[12] * m[2] * m[9];
+        inv[2] = m[1] * m[6] * m[15] - m[1] * m[7] * m[14] - m[5] * m[2] * m[15] + m[5] * m[3] * m[14] + m[13] * m[2] * m[7] - m[13] * m[3] * m[6];
+        inv[6] = -m[0] * m[6] * m[15] + m[0] * m[7] * m[14] + m[4] * m[2] * m[15] - m[4] * m[3] * m[14] - m[12] * m[2] * m[7] + m[12] * m[3] * m[6];
+        inv[10] = m[0] * m[5] * m[15] - m[0] * m[7] * m[13] - m[4] * m[1] * m[15] + m[4] * m[3] * m[13] + m[12] * m[1] * m[7] - m[12] * m[3] * m[5];
+        inv[14] = -m[0] * m[5] * m[14] + m[0] * m[6] * m[13] + m[4] * m[1] * m[14] - m[4] * m[2] * m[13] - m[12] * m[1] * m[6] + m[12] * m[2] * m[5];
+        inv[3] = -m[1] * m[6] * m[11] + m[1] * m[7] * m[10] + m[5] * m[2] * m[11] - m[5] * m[3] * m[10] - m[9] * m[2] * m[7] + m[9] * m[3] * m[6];
+        inv[7] = m[0] * m[6] * m[11] - m[0] * m[7] * m[10] - m[4] * m[2] * m[11] + m[4] * m[3] * m[10] + m[8] * m[2] * m[7] - m[8] * m[3] * m[6];
+        inv[11] = -m[0] * m[5] * m[11] + m[0] * m[7] * m[9] + m[4] * m[1] * m[11] - m[4] * m[3] * m[9] - m[8] * m[1] * m[7] + m[8] * m[3] * m[5];
+        inv[15] = m[0] * m[5] * m[10] - m[0] * m[6] * m[9] - m[4] * m[1] * m[10] + m[4] * m[2] * m[9] + m[8] * m[1] * m[6] - m[8] * m[2] * m[5];
+
+        const auto det = m[0] * inv[0] + m[1] * inv[4] + m[2] * inv[8] + m[3] * inv[12];
+
+        if (det == 0)
+            return Matrix::identity();
+
+        const auto idet = 1.f / det;
+
+        Matrix result;
+        for (size_t i = 0; i < 16; ++ i)
+            result[i] = inv[i] * idet;
+
+        return result;
+    }
+
+    static Matrix identity () {
+        return { 1, 0, 0, 0,
+                 0, 1, 0, 0,
+                 0, 0, 1, 0,
+                 0, 0, 0, 1 };
+    }
+
+    static Matrix scale (floating x, floating y, floating z) {
+        return { x, 0, 0, 0,
+                 0, y, 0, 0,
+                 0, 0, z, 0,
+                 0, 0, 0, 1 };
+    }
+
+    static Matrix scale (Vector vec) { return scale (vec[0], vec[1], vec[2]); }
+
+    static Matrix translate (floating x, floating y, floating z) {
+        return { 1, 0, 0, x,
+                 0, 1, 0, y,
+                 0, 0, 1, z,
+                 0, 0, 0, 1 };
+    }
+
+    static Matrix translate (Vector vec) { return translate (vec[0], vec[1], vec[2]); }
+
+    // http://www.opengl.org/sdk/docs/man2/xhtml/gluPerspective.xml
+    static Matrix perspective (floating fov, floating asp, floating near, floating far) {
+        const auto f = 1.0 / tan (fov * M_PI / 360.0);
+        const auto d = 1.0 / (near - far);
+        return { f/asp,  0, 0,                0,
+                 0,    -f,  0,                0,
+                 0,     0,  (near + far) * d, 2.0*near*far*d,
+                 0,     0,  -1,               0
+        };
+    }
+
+    // http://www.opengl.org/sdk/docs/man2/xhtml/gluLookAt.xml
+    static Matrix lookAt (Point eye, Point center, Vector up) {
+        up = normalised (up);
+        const auto f = normalised (center - eye);
+        const auto s = normalised (f.cross (up));
+        const auto u = s.cross (f);
+        const auto M = Matrix {
+             s[0],  s[1],  s[2], 0,
+             u[0],  u[1],  u[2], 0,
+            -f[0], -f[1], -f[2], 0,
+             0,     0,     0,    1
+        };
+
+        return M * Matrix::translate(-eye);
+    }
+
+private: /* Fields: */
+    floating m_data[16];
+};
+
 /****************************
  * representation of colour *
  ****************************/
@@ -222,6 +402,10 @@ public: /* Methods: */
   }
 
   bool close(const Colour& c) const { return almost_zero(diff(c)); }
+
+  bool isZero () const {
+      return r*r + g*g + b*b == 0.0;
+  }
 
   Colour& operator += (const Colour& c) {
     r += c.r;
