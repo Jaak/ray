@@ -376,7 +376,7 @@ private:
 
         state.hitpoint = hitpoint;
         state.direction = sample.direction;
-        state.throughput = state.throughput * sample.colour * (sample.cosTheta / brdfDirPdfW);
+        state.throughput *= sample.colour * (sample.cosTheta / brdfDirPdfW);
         return true;
     }
 

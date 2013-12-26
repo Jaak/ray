@@ -408,9 +408,12 @@ public: /* Methods: */
   }
 
   Colour& operator += (const Colour& c) {
-    r += c.r;
-    g += c.g;
-    b += c.b;
+    r += c.r; g += c.g; b += c.b;
+    return *this;
+  }
+
+  Colour& operator *= (const Colour& c) {
+    r *= c.r; g *= c.g; b *= c.b;
     return *this;
   }
 
