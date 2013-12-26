@@ -28,6 +28,10 @@ public: /* Methods: */
         return (*this)[i*m_height + j];
     }
 
+    void fill (const T& value) {
+        std::fill (this->begin (), this->end (), value);
+    }
+
 private: /* Fields: */
     const size_t m_width;
     const size_t m_height;

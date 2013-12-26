@@ -6,7 +6,6 @@
 #include "scene.h"
 #include "sdl_surface.h"
 #include "tga_surface.h"
-#include "uniform_sampler.h"
 #include "vcm.h"
 
 #ifdef HAVE_GD_SUPPORT_PNG
@@ -94,15 +93,15 @@ int main(int argc, char** argv) {
     scene.setRenderer(new Raytracer (scene));
   }
 
-  /******************
-   * Select sampler *
-   ******************/
+  /*************************
+   * Set number of samples *
+   *************************/
 
   if (vm.count("samples") == 0) {
-    scene.setSampler(new UniformSampler(1));
+    scene.setSamples(1);
   }
   else {
-    scene.setSampler(new UniformSampler(vm["samples"].as<size_t>()));
+    scene.setSamples(vm["samples"].as<size_t>());
   }
 
   /*****************

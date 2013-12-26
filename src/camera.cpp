@@ -22,9 +22,25 @@ void Camera::setup (Point from, Point at, Vector up, floating fov, floating hith
     m_imagePlaneDistance = width / (2.0 * tan(fov * M_PI / 360.0));
 }
 
+bool Camera::raster (Point worldPoint, floating& x, floating& y) const {
+    const auto eyeToWorldPoint = worldPoint - m_eye;
+    if (eyeToWorldPoint.dot (m_forward) <= 0.0) {
+        return false;
+    }
 
-Ray Camera::spawnRay(floating hp, floating wp) const {
-    const auto screenPoint = Point {wp, hp, 0.0};
+    const auto screenPoint = m_toScreen.transform (worldPoint);
+    if (0 <= screenPoint.x && screenPoint.x < m_width &&
+        0 <= screenPoint.y && screenPoint.y < m_height) {
+        x = screenPoint.x;
+        y = screenPoint.y;
+        return true;
+    }
+
+    return false;
+}
+
+Ray Camera::spawnRay(floating x, floating y) const {
+    const auto screenPoint = Point {x, y, 0.0};
     const auto worldPoint = m_fromScreen.transform (screenPoint);
     const auto direction = normalised (worldPoint - m_eye);
     return { m_eye, direction };

@@ -438,6 +438,10 @@ inline Colour operator+(const Colour& c1, const Colour& c2) {
   return { c1.r + c2.r, c1.g + c2.g, c1.b + c2.b };
 }
 
+inline Colour operator-(const Colour& c1, const Colour& c2) {
+  return { c1.r - c2.r, c1.g - c2.g, c1.b - c2.b };
+}
+
 inline Colour operator*(floating s, const Colour& c2) {
   return { s * c2.r, s * c2.g, s * c2.b };
 }

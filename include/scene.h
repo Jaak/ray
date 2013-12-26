@@ -21,7 +21,6 @@ class Pixel;
 class Primitive;
 class PrimitiveManager;
 class Renderer;
-class Sampler;
 class SceneReader;
 
 /// Representation of scene.
@@ -57,7 +56,7 @@ public: /* Methods: */
 
   void setRenderer(Renderer* r);
 
-  void setSampler(Sampler* s);
+  void setSamples(size_t n) { m_samples = n; }
 
   void setSceneReader(SceneReader* sr);
 
@@ -71,8 +70,6 @@ public: /* Methods: */
   Materials& materials () { return m_materials; }
   Camera& camera() { return m_camera; }
   const Camera& camera() const { return m_camera; }
-  Sampler& sampler () { return *m_sampler; }
-  const Sampler& sampler () const { return *m_sampler; }
   Renderer& renderer () { return *m_renderer; }
   const Renderer& renderer () const { return *m_renderer; }
   void setBackground(const Colour& c);
@@ -87,6 +84,10 @@ public: /* Methods: */
       m_sceneSphere.setRadius (radius);
   }
 
+private:
+
+    void updatePixel (size_t x, size_t y, Colour c) const;
+
 
 protected: /* Fields: */
   SceneSphere                           m_sceneSphere;
@@ -99,7 +100,7 @@ protected: /* Fields: */
   std::vector<std::unique_ptr<Surface>> m_surfaces;
   Textures                              m_textures;
   std::unique_ptr<Renderer>             m_renderer;
-  std::unique_ptr<Sampler>              m_sampler;
+  size_t                                m_samples;
 };
 
 #endif

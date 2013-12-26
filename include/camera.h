@@ -13,12 +13,13 @@ public: /* Methods: */
 
   void setup (Point from, Point at, Vector up, floating fov, floating hither, size_t width, size_t height);
 
-  Ray spawnRay(floating, floating) const;
+  Ray spawnRay(floating x, floating y) const;
 
-  int height() const { return m_height; }
-  int width() const { return m_width; }
+  size_t height() const { return m_height; }
+  size_t width() const { return m_width; }
   floating imagePlaneDistance () const { return m_imagePlaneDistance; }
   Vector forward () const { return m_forward; }
+  bool raster (Point worldPoint, floating& x, floating& y) const;
 
 private: /* Fields: */
   size_t m_height;

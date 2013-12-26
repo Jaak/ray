@@ -82,6 +82,10 @@ public: /* Methods: */
       , m_misVcWeightFactor {0.0}
     { }
 
+    std::unique_ptr<Renderer> clone () const {
+        return std::unique_ptr<Renderer> {new VCMRenderer {m_scene}};
+    }
+
     Colour render (Ray cameraRay) {
         const floating radius = 1e-03;
         const floating radiusSqr = radius * radius;
@@ -295,8 +299,8 @@ private:
         const auto cameraBrdfDirPdfA = pdfWtoA(cameraBrdfDirPdfW, distance, lightEv.cosTheta);
         const auto lightBrdfDirPdfA = pdfWtoA(lightBrdfDirPdfW, distance, camEv.cosTheta);
 
-        const auto wLight = mis(cameraBrdfDirPdfA) * (lightVertex.dVCM + lightVertex.dVC * mis (lightBrdfRevPdfW));
-        const auto wCamera = mis(lightBrdfDirPdfA) * (cameraState.dVCM + cameraState.dVC * mis (cameraBrdfRevPdfW));
+        const auto wLight = mis(cameraBrdfDirPdfA) * (m_misVcWeightFactor + lightVertex.dVCM + lightVertex.dVC * mis (lightBrdfRevPdfW));
+        const auto wCamera = mis(lightBrdfDirPdfA) * (m_misVmWeightFactor + cameraState.dVCM + cameraState.dVC * mis (cameraBrdfRevPdfW));
         const auto misWeight = 1.0 / (wLight + 1.0 + wCamera);
 
         const auto contrib = misWeight * geometryTerm * camEv.colour * lightEv.colour;

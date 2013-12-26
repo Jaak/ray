@@ -167,6 +167,10 @@ public: /* Methods: */
     return run (ray);
   }
 
+  std::unique_ptr<Renderer> clone () const {
+      return std::unique_ptr<Renderer> { new Pathtracer (m_scene) };
+  }
+
   Colour operator () (Ray ray) {
     return run (ray);
   }

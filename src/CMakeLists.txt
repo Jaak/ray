@@ -8,10 +8,10 @@ set(SOURCEFILES
     parser.cpp
     random.cpp
     ray.cpp
+    renderer.cpp
     scene.cpp
     sdl_surface.cpp
     tga_surface.cpp
-    uniform_sampler.cpp
 )
 
 set(RAY_INCLUDE_DIR "${CMAKE_SOURCE_DIR}/include/")
@@ -44,7 +44,6 @@ set(INCLUDEFILES
   "${RAY_INCLUDE_DIR}/raytracer.h"
   "${RAY_INCLUDE_DIR}/rectangle.h"
   "${RAY_INCLUDE_DIR}/renderer.h"
-  "${RAY_INCLUDE_DIR}/sampler.h"
   "${RAY_INCLUDE_DIR}/scene.h"
   "${RAY_INCLUDE_DIR}/scene_reader.h"
   "${RAY_INCLUDE_DIR}/sdl_surface.h"
@@ -54,7 +53,6 @@ set(INCLUDEFILES
   "${RAY_INCLUDE_DIR}/texture.h"
   "${RAY_INCLUDE_DIR}/tga_surface.h"
   "${RAY_INCLUDE_DIR}/triangle.h"
-  "${RAY_INCLUDE_DIR}/uniform_sampler.h"
   "${RAY_INCLUDE_DIR}/vcm.h"
 )
 
