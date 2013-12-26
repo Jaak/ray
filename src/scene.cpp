@@ -159,7 +159,6 @@ void Scene::init() {
     }
   }
 
-  m_camera.init();
   m_manager->init();
   m_sampler->setCamera (m_camera);
   m_sampler->setRenderer (*m_renderer);
@@ -209,14 +208,4 @@ void Scene::run() {
   const auto td =
       time_period(start_time, microsec_clock::local_time()).length();
   std::cout << "Took " << td << std::endl;
-}
-
-std::ostream& operator<<(std::ostream& o, Scene const& s) {
-  o << "Scene: {\n";
-  o << s.m_camera << '\n';
-  o << "Background: " << s.m_background << '\n';
-  o << "Primitives: {\n";
-  o << *s.m_manager;
-  o << "}\n}";
-  return o;
 }

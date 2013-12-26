@@ -228,15 +228,20 @@ public: /* Methods: */
 
     Matrix () { }
 
-    Matrix (floating v)
-        : m_data {v, v, v, v, v, v, v, v, v, v, v, v, v, v, v, v}
-    { }
+    explicit Matrix (floating v) {
+        std::fill (&m_data[0], &m_data[0] + 16, v);
+    }
 
     Matrix (floating m00, floating m01, floating m02, floating m03,
             floating m10, floating m11, floating m12, floating m13,
             floating m20, floating m21, floating m22, floating m23,
             floating m30, floating m31, floating m32, floating m33)
-        : m_data {m00, m01, m02, m03, m10, m11, m12, m13, m20, m21, m22, m23, m30, m31, m32, m33}
+        : m_data {
+            m00, m10, m20, m30,
+            m01, m11, m21, m31,
+            m02, m12, m22, m32,
+            m03, m13, m23, m33
+        }
     { }
 
     floating& operator[](size_t i) { return m_data[i]; }
@@ -258,19 +263,13 @@ public: /* Methods: */
     }
 
     Point transform (Point p) const {
-        const auto& self = *this;
-        const auto iw = 1.0 / (self(3, 0)*p[0] + self(3, 1)*p[1] + self(3,2)*p[2] + self(3,3));
-        auto result = Point {0, 0, 0};
-        for (size_t i = 0; i < 3; ++ i) {
-            result[i] = self(i, 3);
-            for (size_t j = 0; j < 3; ++ j) {
-                result[i] += p[j] * self(i, j);
-            }
-
-            result[i] *= iw;
-        }
-
-        return result;
+        const auto& m = *this;
+        const auto iw = 1.0 / (m(3, 0)*p[0] + m(3, 1)*p[1] + m(3,2)*p[2] + m(3,3));
+        return {
+            iw * (m(0, 0)*p[0] + m(0, 1)*p[1] + m(0, 2)*p[2] + m(0, 3)),
+            iw * (m(1, 0)*p[0] + m(1, 1)*p[1] + m(1, 2)*p[2] + m(1, 3)),
+            iw * (m(2, 0)*p[0] + m(2, 1)*p[1] + m(2, 2)*p[2] + m(2, 3))
+        };
     }
 
     friend Matrix operator * (const Matrix& m1, const Matrix& m2) {
@@ -306,9 +305,9 @@ public: /* Methods: */
         const auto det = m[0] * inv[0] + m[1] * inv[4] + m[2] * inv[8] + m[3] * inv[12];
 
         if (det == 0)
-            return Matrix::identity();
+            return Matrix::identity ();
 
-        const auto idet = 1.f / det;
+        const auto idet = 1.0 / det;
 
         Matrix result;
         for (size_t i = 0; i < 16; ++ i)

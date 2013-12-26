@@ -78,7 +78,6 @@ public: /* Methods: */
   void setBackground(const Colour& c);
   const Material& background() const;
   std::string getFname();
-  friend std::ostream& operator << (std::ostream&, Scene const&);
   const Textures& textures () const { return m_textures; }
   Textures& textures () { return m_textures; }
 

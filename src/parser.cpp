@@ -32,19 +32,6 @@ show_error(const char* s) {
 	fprintf(stderr, "%s\n", s);
 }
 
-bool is_whitespace (int c) {
-    switch (c) {
-    case ' ':
-    case '\t':
-    case '\n':
-    case '\f':
-    case '\r':
-        return true;
-    }
-
-    return false;
-}
-
 void do_comment(FILE* fp) {
   char* cp;
   char comment[256];
@@ -60,51 +47,39 @@ void do_comment(FILE* fp) {
 }
 
 void do_view(Scene& scene, FILE* fp) {
-  Camera& cam = scene.camera();
-  float x, y, z;
-  float fov_angle;
-  float aspect_ratio;
-  float hither;
-  int resx;
-  int resy;
+  float x = 0, y = 0, z = 0;
+  float fov_angle = 45.0;
+  float hither = 0.001;
+  int resx = 800;
+  int resy = 600;
 
-  if (fscanf(fp, " from %f %f %f", &x, &y, &z) != 3)
-    goto fmterr;
+  bool err = false;
 
-  cam.setEye(Point(x, y, z));
+  err = err || (fscanf(fp, " from %f %f %f", &x, &y, &z) != 3);
+  const auto from = Point {x, y, z};
 
-  if (fscanf(fp, " at %f %f %f", &x, &y, &z) != 3)
-    goto fmterr;
+  err = err || (fscanf(fp, " at %f %f %f", &x, &y, &z) != 3);
+  const auto at = Point {x, y, z};
 
-  cam.setAt(Point(x, y, z));
+  err = err || (fscanf(fp, " up %f %f %f", &x, &y, &z) != 3);
+  const auto up = Vector {x, y, z};
 
-  if (fscanf(fp, " up %f %f %f", &x, &y, &z) != 3)
-    goto fmterr;
-
-  cam.setUp(Vector(x, y, z));
-
-  if (fscanf(fp, " angle %f", &fov_angle) != 1)
-    goto fmterr;
-
-  cam.setFOV(fov_angle);
+  err = err || (fscanf(fp, " angle %f", &fov_angle) != 1);
 
   fscanf(fp, " hither %f", &hither);
 
-  cam.setHither(hither);
-
-  aspect_ratio = (float) 1.0;
-
   fscanf(fp, " resolution %d %d", &resx, &resy);
 
-  cam.setDimensions(resy, resx);
-  for (auto& surface : scene.surfaces()) {
-    surface->setDimensions(resy, resx);
+  if (! err) {
+      scene.camera ().setup (from, at, up, fov_angle, hither, resx, resy);
+      for (auto& surface : scene.surfaces()) {
+        surface->setDimensions(resy, resx);
+      }
   }
-
-  return;
-fmterr:
-  show_error("NFF view syntax error");
-  exit(1);
+  else {
+      show_error("NFF view syntax error");
+      exit(1);
+  }
 }
 
 void do_regular_light(Scene &scene, FILE *fp) {

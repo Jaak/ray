@@ -185,7 +185,7 @@ private: /* Methods: */
 
 
   // TODO: proper brdf, this thing is a huge hack
-  inline Colour brdf (const Primitive* prim, const Point& p, const Vector&, const Vector&) {
+  inline Colour brdf (const Primitive* prim, const Point& p) {
       const auto& m = getMat (prim);
       if (reflectPr (m) > 0.0) return Colour { 0, 0, 0 };
       if (refractPr (m) > 0.0) return Colour { 0, 0, 0 };
@@ -359,14 +359,14 @@ private: /* Methods: */
                   brdf0 = Colour { 1.0, 1.0, 1.0 } / M_PI;
               }
               else {
-                  brdf0 = brdf (lv.m_prim, lv.m_pos, lv.m_pos - lightVertices[s - 2].m_pos, ev.m_pos - lv.m_pos);
+                  brdf0 = brdf (lv.m_prim, lv.m_pos);
               }
 
               if (t == 1) {
-                  brdf1 = brdf (ev.m_prim,  ev.m_pos, ev.m_pos - lv.m_pos, m_scene.camera ().eye () - ev.m_pos);
+                  brdf1 = brdf (ev.m_prim,  ev.m_pos);
               }
               else {
-                  brdf1 = brdf (ev.m_prim, ev.m_pos, ev.m_pos - lv.m_pos, eyeVertices[t - 2].m_pos - ev.m_pos);
+                  brdf1 = brdf (ev.m_prim, ev.m_pos);
               }
 
               c(s, t) = gcache (&lv, &ev) * brdf0 * brdf1;

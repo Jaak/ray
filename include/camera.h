@@ -10,43 +10,24 @@
 /// A camera.
 class Camera {
 public: /* Methods: */
-  Camera();
 
-  /// Spawns a new ray through given screen coordinates.
+  void setup (Point from, Point at, Vector up, floating fov, floating hither, size_t width, size_t height);
+
   Ray spawnRay(floating, floating) const;
 
   int height() const { return m_height; }
   int width() const { return m_width; }
-  const Point& eye () const { return m_eye; }
   floating imagePlaneDistance () const { return m_imagePlaneDistance; }
   Vector forward () const { return m_forward; }
 
-  void setDimensions(int h, int w) { m_height = h; m_width = w; }
-  void setHither(floating h) { m_hither = h; }
-  void setEye(const Point& e) { m_eye = e; }
-  void setAt(const Point& a) { m_at = a; }
-  void setUp(const Vector& u) { m_up = normalised(u); }
-  void setFOV(floating f) { m_fov = f; }
-
-  /**
-   * Initialises camera. Computes right vector and also
-   * modifies up to be perpendicular to view direction vector.
-   * Also modifies ups and rights length using fov.
-   */
-  void init();
-
-  friend std::ostream& operator<<(std::ostream&, Camera const&);
-
-private:             /* Fields: */
-  int m_height, m_width; ///< Height and width of the screen.
-  Point m_eye;           ///< Position of camera eye.
-  Point m_at;            ///< Point which camera looks at.
-  Vector m_forward;      ///< (Unitary) direction the camera is looking at.
-  Vector m_up;           ///< Up vector of camera.
-  Vector m_right;        ///< Right vector of camera.
+private: /* Fields: */
+  size_t m_height;
+  size_t m_width;
+  Point m_eye;                   ///< Position of camera eye.
+  Vector m_forward;              ///< (Unitary) direction the camera is looking at.
   floating m_imagePlaneDistance; ///< Distance from eye to image plane.
-  floating m_hither;     ///< Clipping distance.
-  floating m_fov;        ///< Field of view.
+  Matrix m_toScreen;             ///< Model-view projection matrix.
+  Matrix m_fromScreen;           ///< Matrix to project screen-coordinates to world.
 };
 
 #endif
