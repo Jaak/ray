@@ -30,7 +30,6 @@ private: /* Types: */
         Colour    throughput;
         size_t    length;
         bool      isFinite;
-        bool      isSpecular;
 
         floating  dVCM;
         floating  dVC;
@@ -83,7 +82,7 @@ public: /* Methods: */
       , m_misVcWeightFactor {0.0}
     { }
 
-    Colour render (Ray ray) {
+    Colour render (Ray cameraRay) {
         const floating radius = 1e-03;
         const floating radiusSqr = radius * radius;
         const floating etaVCM = (M_PI * radiusSqr) / 1.0;
@@ -121,13 +120,13 @@ public: /* Methods: */
 
             // Don't connect specular vertices to camera
             if (! lightBrdf.isDelta ()) {
-                if (lightState.length > MIN_PATH_LENGTH) {
+                if (lightState.length + 1 >= MIN_PATH_LENGTH) {
                     connectToCamera (lightState, hitpoint, lightBrdf);
                 }
             }
 
             // Stop if the path would become too long
-            if (lightState.length + 1 >= MAX_PATH_LENGTH)
+            if (lightState.length + 2 > MAX_PATH_LENGTH)
                 break;
 
             if (! sampleLightScattering (lightBrdf, hitpoint, lightState))
@@ -136,7 +135,7 @@ public: /* Methods: */
 
         auto colour = Colour {0, 0, 0};
 
-        PathState cameraState = generateCameraSample (ray);
+        PathState cameraState = generateCameraSample (cameraRay);
         for (;; ++ cameraState.length) {
             const auto ray = shootRay (cameraState.hitpoint, cameraState.direction);
             const auto intr = intersectWithPrims (ray);
@@ -172,7 +171,7 @@ public: /* Methods: */
                 break;
 
             // Connect to a light source
-            if (! cameraBrdf.isDelta () && cameraState.length > MIN_PATH_LENGTH) {
+            if (! cameraBrdf.isDelta () && cameraState.length + 1 >= MIN_PATH_LENGTH) {
                 colour += cameraState.throughput * directIllumination (cameraState, hitpoint, cameraBrdf);
             }
 
@@ -228,7 +227,6 @@ private:
         st.throughput = e.energy / emissionPdfW;
         st.length = 1;
         st.isFinite = light->isFinite ();
-        st.isSpecular = true;
         st.dVCM = mis (directPdfW / emissionPdfW);
         st.dVC = light->isDelta () ? 0.0 : mis (e.cosTheta / emissionPdfW); 
         return st;
@@ -247,13 +245,12 @@ private:
         st.throughput = Colour {1, 1, 1};
         st.length = 1;
         st.isFinite = true;
-        st.isSpecular = true;
         st.dVCM = mis (1.0 / cameraPdfW);
         st.dVC = 0.0;
         return st;
     }
     
-    Colour getLightRadiance (Light* light, PathState cameraState, Point hitpoint, Vector dir) const {
+    Colour getLightRadiance (Light* light, const PathState& cameraState, Point hitpoint, Vector dir) const {
         const auto lightPickPr = light->samplingPr ();
         const auto r = light->radiance (hitpoint, dir);
         if (r.radiance.isZero ())
@@ -322,14 +319,14 @@ private:
             return {0, 0, 0};
 
         const auto contPr = cameraBrdf.continuationPr ();
-        const auto brdfDirPdfW = camEv.dirPdfW * (light->isDelta () ? 0.0 : contPr);
+        const auto brdfDirPdfW = light->isDelta () ? 0.0 : (camEv.dirPdfW * contPr);
         const auto brdfRevPdfW = camEv.revPdfW * contPr;
-        const auto wLight = mis (brdfDirPdfW * (lightPickPr * i.directPdfW));
+        const auto wLight = mis (brdfDirPdfW / (lightPickPr * i.directPdfW));
         const auto wCamera = mis (i.emissionPdfW * camEv.cosTheta / (i.directPdfW * i.cosTheta)) *
             (m_misVmWeightFactor + cameraState.dVCM + cameraState.dVC*mis(brdfRevPdfW));
         const auto misWeight = 1.0 / (wLight + 1.0 + wCamera);
 
-        const auto contrib = (misWeight * camEv.cosTheta / (lightPickPr * i.directPdfW)) * i.radiance * camEv.colour;
+        const auto contrib = (misWeight * camEv.cosTheta / (lightPickPr * i.directPdfW)) * (i.radiance * camEv.colour);
         if (contrib.isZero () || occluded (hitpoint, i.direction, i.distance))
             return {0, 0, 0};
 
@@ -345,8 +342,8 @@ private:
         return sampleScattering<true>(lightBrdf, hitpoint, lightState);
     }
 
-    bool sampleEyeScattering (const BRDF& lightBrdf, Point hitpoint, PathState& lightState) const {
-        return sampleScattering<false>(lightBrdf, hitpoint, lightState);
+    bool sampleEyeScattering (const BRDF& cameraBrdf, Point hitpoint, PathState& cameraState) const {
+        return sampleScattering<false>(cameraBrdf, hitpoint, cameraState);
     }
 
     template <bool LightTracing>
@@ -375,7 +372,6 @@ private:
                 (state.dVC*mis(brdfRevPdfW) + state.dVCM + m_misVmWeightFactor);
             state.dVCM = dVCM;
             state.dVC = dVC;
-            state.isSpecular = false;
         }
 
         state.hitpoint = hitpoint;
@@ -387,7 +383,10 @@ private:
     inline bool occluded (Point pos, Vector dir, floating dist) const {
         const auto ray = shootRay (pos, dir);
         const auto intr = intersectWithPrims (ray);
-        if (intr.hasIntersections () && 0 < intr.dist() && intr.dist () + 2*ray_epsilon < dist)
+        // tolerance to avoid self intersections... 
+        // TODO think if this is actually correct...
+        const auto tolerance = 2*ray_epsilon;
+        if (intr.hasIntersections () && tolerance < intr.dist() && intr.dist () < dist - tolerance)
             return true;
 
         return false;
