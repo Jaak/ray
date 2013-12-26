@@ -46,7 +46,7 @@ private: /* Types: */
         floating   dVC;
 
         // path has previous hit point
-        Vertex (Point hitpoint, const PathState& st, BRDF brdf)
+        Vertex (Point hitpoint, const PathState& st, const BRDF& brdf)
             : hitpoint (hitpoint)
             , throughput (st.throughput)
             , length (st.length)
@@ -99,7 +99,7 @@ public: /* Methods: */
                 break;
 
             const auto prim = intr.getPrimitive ();
-            const auto& m = m_scene.materials ()[prim->material()];
+            const Material& m = m_scene.materials ()[prim->material()];
             const auto hitpoint = intr.point ();
             const auto lightBrdf = BRDF { ray, prim->normal (hitpoint), m };
 
@@ -146,7 +146,7 @@ public: /* Methods: */
             }
 
             const auto prim = intr.getPrimitive ();
-            const auto& m = m_scene.materials ()[prim->material()];
+            const Material& m = m_scene.materials ()[prim->material()];
             const auto hitpoint = intr.point ();
             const auto cameraBrdf = BRDF { ray, prim->normal (hitpoint), m };
             

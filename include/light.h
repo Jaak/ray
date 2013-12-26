@@ -96,7 +96,7 @@ public: /* Types: */
 public: /* Methods: */
 
   explicit Light (const SceneSphere& sceneSphere, Colour intensity, bool isFinite, bool isDelta)
-    : m_sceneSphere { sceneSphere }
+    : m_sceneSphere (sceneSphere)
     , m_intensity { intensity }
     , m_finite { isFinite }
     , m_delta { isDelta }

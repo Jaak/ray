@@ -218,7 +218,7 @@ void do_background(Scene& scene, FILE* fp) {
 }
 
 void do_fill(Scene& scene, FILE* fp) {
-  float r, g, b, ka, kd, ks, ks_spec, phong_pow, ang, t, ior;
+  float r, g, b, kd, ks, ks_spec, phong_pow, ang, t, ior;
 
   if (fscanf(fp, "%f %f %f", &r, &g, &b) != 3) {
     show_error("fill color syntax error");
@@ -230,8 +230,6 @@ void do_fill(Scene& scene, FILE* fp) {
     exit(1);
   }
 
-  /* some parms not input in NFF, so hard-coded. */
-  ka = (float) 0.1;
   ks_spec = ks;
   /* convert phong_pow back into phong hilight angle. */
   /* reciprocal of formula in libpr1.c, lib_output_color() */

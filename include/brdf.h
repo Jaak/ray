@@ -71,7 +71,7 @@ public: /* Methods: */
     BRDF (const Ray& ray, const Vector& normal, const Material& mat)
         : m_frame { normal }
         , m_localDirFix { m_frame.toLocal (- ray.dir ()) }
-        , m_mat { mat }
+        , m_mat (mat)
         , m_diffPr { 0.0 }
         , m_reflPr { 0.0 }
         , m_refrPr { 0.0 }
@@ -88,7 +88,7 @@ public: /* Methods: */
         // is given by the Fresnel term below:
         const auto fres = mat.t () > 0 ? fresnel (cosI, 1.0, mat.ior ()) : 1.0;
         const auto diff = mat.kd ();
-        const auto refl = mat.ks () + fres * mat.t ();
+        const auto refl = fres * mat.ks ();
         const auto refr = (1.0 - fres) * mat.t ();
         const auto total = diff + refl + refr;
 
@@ -99,7 +99,7 @@ public: /* Methods: */
         m_diffPr = diff / total;
         m_reflPr = refl / total;
         m_refrPr = refr / total;
-        m_contPr = clamp (std::max (col.r, std::max (col.g, col.b)), 0, 1);
+        m_contPr = clamp (luminance(col), 0, 1);
         m_fresPr = fres;
 
         m_valid = true;
@@ -212,7 +212,7 @@ private: /* Methods: */
     void sampleReflect (Colour& result, Vector& dir, floating& pdfW) const {
         dir = Vector { - m_localDirFix.x, -m_localDirFix.y, m_localDirFix.z }; // reflect local over (0, 0, 1)
         pdfW += m_reflPr;
-        result += m_mat.colour () * m_mat.ks () * m_fresPr / fabs (dir.z); /// XXX HACK to cancel the cos factor from outside
+        result += m_mat.colour () * m_fresPr / fabs (dir.z); /// XXX HACK to cancel the cos factor from outside
     }
 
     template <bool LightTracing>
@@ -221,18 +221,14 @@ private: /* Methods: */
         floating cosT = internal ? 1.0 : -1.0;
         const floating n = internal ? m_mat.ior () : 1.0 / m_mat.ior ();
         const floating cosI = fabs (m_localDirFix.z);
-
-        const floating sinI2 = 1.0 - cosI * cosI;
-        const floating sinT2 = n * n * sinI2;
+        const floating sinT2 = n * n * (1.0 - cosI * cosI);
         if (sinT2 < 1.0) {
             cosT *= std::sqrt (1.0 - sinT2);
             dir = Vector { - n*m_localDirFix.x, -n*m_localDirFix.y, cosT };
             pdfW += m_refrPr;
             const auto factor = LightTracing ? n*n : 1.0;
-            result += m_mat.colour()*m_mat.t ()*(1.0 - m_fresPr)*factor / fabs (cosT); /// XXX HACK same as previous
+            result += m_mat.colour()*(1.0 - m_fresPr)*factor / fabs (cosT); /// XXX HACK same as previous
         }
-
-        // otherwise total internal refraction
     }
 
 private: /* Fields: */
