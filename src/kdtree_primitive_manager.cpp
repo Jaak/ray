@@ -1,8 +1,10 @@
 #include "kdtree_primitive_manager.h"
 
+#include "camera.h"
+#include "framebuffer.h"
+#include "intersection.h"
 #include "primitive.h"
 #include "ray.h"
-#include "intersection.h"
 
 #include <algorithm>
 #include <cassert>
@@ -98,6 +100,22 @@ KdTreePrimitiveManager::~KdTreePrimitiveManager() {
 
     std::cout << "Intersections : " << icount << std::endl;
     Node::release (m_root);
+}
+
+void drawTree (const Camera& cam, Framebuffer& buf, const Aabb& box, const Node* node) {
+    if (node == nullptr) {
+        buf.drawAabb (cam, box, Colour {1, 1, 1});
+        return;
+    }
+
+    Aabb left, right;
+    box.split_at (left, right, node->m_axis, node->m_split);
+    drawTree (cam, buf, left, node->m_left);
+    drawTree (cam, buf, right, node->m_right);
+}
+
+void KdTreePrimitiveManager::debugDrawOnFramebuffer (const Camera& cam, Framebuffer& buf) const {
+    drawTree (cam, buf, m_bbox, m_root);
 }
 
 bool intersectAabb(const Aabb& box, const Ray& ray, floating& a, floating& b) {

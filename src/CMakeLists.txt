@@ -1,5 +1,6 @@
 set(SOURCEFILES
     camera.cpp
+    framebuffer.cpp
     intersection.cpp
     kdtree_primitive_manager.cpp
     main.cpp

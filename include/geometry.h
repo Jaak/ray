@@ -196,6 +196,20 @@ public: /* Methods: */
 
   floating sqDist(const Point& p) const { return (*this - p).sqrlength(); }
 
+    friend Point operator+(const Point& p, const Vector& v) {
+      return { p.x + v.x, p.y + v.y, p.z + v.z };
+    }
+
+    friend Point operator-(const Point& p, const Vector& v) {
+      return { p.x - v.x, p.y - v.y, p.z - v.z };
+    }
+
+    friend Vector operator-(const Point& p, const Point& q) {
+      return { p.x - q.x, p.y - q.y, p.z - q.z };
+    }
+
+    friend Point operator+(const Vector& v, const Point& p) { return p + v; }
+
   friend std::ostream& operator<<(std::ostream& os, const Point& p) {
     os << "Point {" << p.x << "," << p.y << "," << p.z << "," << p.w << "}";
     return os;
@@ -208,12 +222,6 @@ public: /* Fields: */
     struct { floating u, v; };
   }; 
 };
-
-inline Point operator+(const Point& p, const Vector& v) {
-  return { p.x + v.x, p.y + v.y, p.z + v.z };
-}
-
-inline Point operator+(const Vector& v, const Point& p) { return p + v; }
 
 inline Point Point::nudgePoint(const Vector& v) const {
   return *this + ray_epsilon * v;

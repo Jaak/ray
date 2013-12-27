@@ -7,6 +7,9 @@ class Ray;
 
 #include <ostream>
 
+class Camera;
+class Framebuffer;
+
 /**
  * Base class for all primitive-managers.
  * Takes care of
@@ -32,6 +35,8 @@ public: /* Methods: */
    * manager, otherwise managers behaviour is undefined.
    */
   virtual void init() = 0;
+
+  virtual void debugDrawOnFramebuffer (const Camera&, Framebuffer&) const { }
 
   /// Intersects @a ray with primitives.
   virtual Intersection intersectWithPrims(const Ray& ray) const = 0;

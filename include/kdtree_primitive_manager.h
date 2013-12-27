@@ -16,9 +16,11 @@ class KdTreePrimitiveManager : public PrimitiveManager {
 public: /* Methods: */
   KdTreePrimitiveManager();
   ~KdTreePrimitiveManager();
-  virtual void init();
-  virtual void addPrimitive(const Primitive* p);
-  virtual Intersection intersectWithPrims(const Ray& ray) const;
+
+  void init();
+  void addPrimitive(const Primitive* p);
+  Intersection intersectWithPrims(const Ray& ray) const;
+  void debugDrawOnFramebuffer (const Camera& cam, Framebuffer& buf) const;
 
 private:            /* Fields: */
   PrimList m_prims; ///< List of all the primitives.

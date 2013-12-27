@@ -83,12 +83,12 @@ void Scene::run() {
 
     boost::mutex actualFramebufferMutex;
     boost::thread_group threads;
-    size_t count = 1;
+    size_t count = 0;
     const auto width = m_camera.width ();
     const auto height = m_camera.height ();
     auto actualBuffer = Framebuffer {width, height};
     for (size_t i = 0; i < nP; ++ i) {
-        auto renderFunc = [&]() {
+        const auto renderFunc = [&, i]() {
             auto frame = Framebuffer {width, height};
             auto renderer = m_renderer->clone ();
             for (size_t j = i; j < m_samples; j += nP) {
@@ -96,8 +96,8 @@ void Scene::run() {
                 renderer->render (frame);
                 boost::mutex::scoped_lock scoped_lock (actualFramebufferMutex);
                 ++ count;
-                for (size_t x = 0; x < frame.width (); ++ x) {
-                    for (size_t y = 0; y < frame.height (); ++ y) {
+                for (size_t x = 0; x < width; ++ x) {
+                    for (size_t y = 0; y < height; ++ y) {
                         const auto c = frame (x, y);
                         actualBuffer (x, y) += (c - actualBuffer (x, y)) / count;
                         updatePixel (x, y, actualBuffer (x, y));
@@ -110,6 +110,14 @@ void Scene::run() {
     }
 
     threads.join_all();
+
+    //// To dump the kd-tree or whatever structure on the screen:
+    // m_manager->debugDrawOnFramebuffer (m_camera, actualBuffer);
+    // for (size_t x = 0; x < width; ++ x) {
+    //     for (size_t y = 0; y < height; ++ y) {
+    //         updatePixel (x, y, actualBuffer (x, y));
+    //     }
+    // }
 
     const auto td =
         time_period(start_time, microsec_clock::local_time()).length();

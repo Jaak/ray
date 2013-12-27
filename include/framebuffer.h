@@ -4,6 +4,9 @@
 #include "geometry.h"
 #include "table.h"
 
+struct Aabb;
+class Camera;
+
 class Framebuffer : public table<Colour> {
 public: /* Methods: */
 
@@ -41,6 +44,8 @@ public: /* Methods: */
         if (e2 < dx) { err += dx; y0 += sy; }
       }
     }
+
+    void drawAabb (const Camera& cam, const Aabb& box, Colour col);
 
     using table<Colour>::operator ();
 };
