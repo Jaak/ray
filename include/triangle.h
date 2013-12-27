@@ -18,30 +18,32 @@ public: /* Methods: */
   Triangle(const Point& a, const Point& b, const Point& c)
     : m_point { a, b, c }
     , m_normal { computNormal () }
-    , m_d { computeD () }
   { }
 
   Vector normal(const Point&) const { return m_normal; }
 
+  // http://www.scratchapixel.com/lessons/3d-basic-lessons/lesson-9-ray-triangle-intersection/m-ller-trumbore-algorithm/
   void intersect(const Ray& ray, Intersection& intr) const {
-    const Point o = ray.origin();
-    const Vector vs[] = { m_point[0] - o, m_point[1] - o, m_point[2] - o };
-    floating a = m_normal.dot(ray.dir());
-
-    if (almost_zero(a)) {
+    const auto edge1 = m_point[2] - m_point[0];
+    const auto edge2 = m_point[1] - m_point[0];
+    const auto D = ray.dir ();
+    const auto pvec = D.cross (edge2);
+    const auto det = edge1.dot (pvec);
+    if (det == 0.0)
       return;
-    }
 
-    a = -(m_normal.dot(o) + m_d) / a;
-
-    const Vector pmo = a * ray.dir();
-    if (vs[1].cross(vs[0]).dot(pmo) < 0 ||
-        vs[2].cross(vs[1]).dot(pmo) < 0 ||
-        vs[0].cross(vs[2]).dot(pmo) < 0) {
+    const auto invDet = 1.0 / det;
+    const auto tvec = ray.origin () - m_point[0];
+    const auto u = tvec.dot (pvec) * invDet;
+    if (u < 0.0 || u > 1.0)
       return;
-    }
 
-    intr.update(ray, this, a);
+    const auto qvec = tvec.cross (edge1);
+    const auto v = D.dot (qvec) * invDet;
+    if (v < 0.0 || u + v > 1.0)
+      return;
+
+    intr.update (ray, this, edge2.dot (qvec) * invDet);
   }
 
   floating getLeftExtreme(Axes axis) const {
@@ -75,7 +77,7 @@ public: /* Methods: */
     bu = 1.0 - bv - bw;
     tu = bu * m_point[0].u + bv * m_point[1].u + bw * m_point[2].u;
     tv = bu * m_point[0].v + bv * m_point[1].v + bw * m_point[2].v;
-    
+
     return texture->getTexel(tu, tv);
   }
 
@@ -93,14 +95,9 @@ private: /* Methods: */
     return normalised((m_point[1] - m_point[0]).cross(m_point[2] - m_point[0]));
   }
 
-  floating computeD () const {
-    return -m_normal.dot(m_point[0]);
-  }
-
-protected: /* Fields: */ 
+protected: /* Fields: */
   const Point     m_point[3]; ///< The points of the triangle
   const Vector    m_normal;   ///< Normal of the triangle
-  const floating  m_d;        ///< With m_normal represents the plane of the triangle.
 };
 
 #endif

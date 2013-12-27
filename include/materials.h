@@ -12,7 +12,7 @@ public: /* Methods: */
     Materials ()
         : m_materials ()
     {
-        m_materials.emplace_back (Material { Colour {0, 0, 0} });
+        m_materials.emplace_back (Colour {0, 0, 0}, 0.0, 0.0, 0.0, 1, 1);
     }
 
     material_index_t registerMaterial(Material mat) {

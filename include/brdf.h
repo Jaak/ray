@@ -92,8 +92,11 @@ public: /* Methods: */
         const auto refr = (1.0 - fres) * mat.t ();
         const auto total = diff + refl + refr;
 
-        if (total < epsilon)
+        if (total < epsilon) {
+            m_valid = true;
+            m_delta = true;
             return;
+        }
 
         const auto col = mat.colour ();
         m_diffPr = diff / total;
@@ -101,7 +104,6 @@ public: /* Methods: */
         m_refrPr = refr / total;
         m_contPr = clamp (luminance(col), 0, 1);
         m_fresPr = fres;
-
         m_valid = true;
         m_delta = (m_diffPr == 0.0);
     }
@@ -212,22 +214,22 @@ private: /* Methods: */
     void sampleReflect (Colour& result, Vector& dir, floating& pdfW) const {
         dir = Vector { - m_localDirFix.x, -m_localDirFix.y, m_localDirFix.z }; // reflect local over (0, 0, 1)
         pdfW += m_reflPr;
-        result += m_mat.colour () * m_fresPr / fabs (dir.z); /// XXX HACK to cancel the cos factor from outside
+        result += m_mat.colour () * m_mat.ks()*m_fresPr / fabs (dir.z); /// XXX HACK to cancel the cos factor from outside
     }
 
+    // TODO: always exiting to or entering from air
     template <bool LightTracing>
     void sampleRefract (Colour& result, Vector& dir, floating& pdfW) const {
         const bool internal = m_localDirFix.z < 0.0;
-        floating cosT = internal ? 1.0 : -1.0;
-        const floating n = internal ? m_mat.ior () : 1.0 / m_mat.ior ();
+        const floating n = internal ? (m_mat.ior () / 1.0) : (1.0 / m_mat.ior ());
         const floating cosI = fabs (m_localDirFix.z);
         const floating sinT2 = n * n * (1.0 - cosI * cosI);
         if (sinT2 < 1.0) {
-            cosT *= std::sqrt (1.0 - sinT2);
+            const auto cosT = (internal ? 1.0 : -1.0) * std::sqrt (1.0 - sinT2);
             dir = Vector { - n*m_localDirFix.x, -n*m_localDirFix.y, cosT };
             pdfW += m_refrPr;
-            const auto factor = LightTracing ? n*n : 1.0;
-            result += m_mat.colour()*(1.0 - m_fresPr)*factor / fabs (cosT); /// XXX HACK same as previous
+            const auto factor = LightTracing ? 1.0 : n*n;
+            result += m_mat.colour()*m_mat.t()*(1.0 - m_fresPr)*factor / fabs (cosT); /// XXX HACK same as previous
         }
     }
 

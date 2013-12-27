@@ -24,19 +24,13 @@ void Camera::setup (Point from, Point at, Vector up, floating fov, floating hith
 
 bool Camera::raster (Point worldPoint, floating& x, floating& y) const {
     const auto eyeToWorldPoint = worldPoint - m_eye;
-    if (eyeToWorldPoint.dot (m_forward) <= 0.0) {
-        return false;
-    }
-
     const auto screenPoint = m_toScreen.transform (worldPoint);
-    if (0 <= screenPoint.x && screenPoint.x < m_width &&
-        0 <= screenPoint.y && screenPoint.y < m_height) {
-        x = screenPoint.x;
-        y = screenPoint.y;
-        return true;
-    }
-
-    return false;
+    x = screenPoint.x;
+    y = screenPoint.y;
+    return
+      eyeToWorldPoint.dot (m_forward) > 0.0 &&
+      0 <= screenPoint.x && screenPoint.x < m_width &&
+      0 <= screenPoint.y && screenPoint.y < m_height;
 }
 
 Ray Camera::spawnRay(floating x, floating y) const {

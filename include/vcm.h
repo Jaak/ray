@@ -100,8 +100,8 @@ public: /* Methods: */
 
         for (size_t x = 0; x < buf.width (); ++ x) {
             for (size_t y = 0; y < buf.height (); ++ y) {
-                const auto dx = rng () - 0.5;
-                const auto dy = rng () - 0.5;
+                const auto dx = rng ();
+                const auto dy = rng ();
                 const auto ray = camera.spawnRay (x + dx, y + dy);
                 const auto col = render (buf, ray);
                 buf.addColour (x, y, col);
@@ -158,6 +158,7 @@ public: /* Methods: */
         auto colour = Colour {0, 0, 0};
 
         PathState cameraState = generateCameraSample (cameraRay);
+        // std::vector<Point> path;
         for (;; ++ cameraState.length) {
             const auto ray = shootRay (cameraState.hitpoint, cameraState.direction);
             const auto intr = intersectWithPrims (ray);
@@ -169,8 +170,9 @@ public: /* Methods: */
             const auto prim = intr.getPrimitive ();
             const Material& m = m_scene.materials ()[prim->material()];
             const auto hitpoint = intr.point ();
+            // path.push_back (hitpoint);
             const auto cameraBrdf = BRDF { ray, prim->normal (hitpoint), m };
-            
+
             if (! cameraBrdf.isValid ())
                 break;
 
@@ -183,7 +185,12 @@ public: /* Methods: */
             if (prim->emissive ()) {
                 if (cameraState.length >= MIN_PATH_LENGTH) {
                     const auto light = prim->getLight ();
-                    colour += cameraState.throughput * getLightRadiance (light, cameraState, hitpoint, ray.dir ());
+                    const auto rad = getLightRadiance (light, cameraState, hitpoint, ray.dir ());
+                    // if (rad.length () > 10) {
+                    //   drawPath (buf, path);
+                    // }
+
+                    colour += cameraState.throughput * rad;
                 }
 
                 break;
@@ -220,6 +227,32 @@ public: /* Methods: */
         return colour;
     }
 
+    void drawPath (Framebuffer& buf, const std::vector<Point>& path) const {
+      const auto& camera = m_scene.camera ();
+      if (path.empty ())
+        return;
+
+      const Colour cols[7] = {
+          {0, 0, 1}
+        , {0, 1, 0}
+        , {0, 1, 1}
+        , {1, 0, 0}
+        , {1, 0, 1}
+        , {1, 1, 0}
+        , {1, 1, 1}
+      };
+
+      floating prevX, prevY;
+      camera.raster (path.front (), prevX, prevY);
+      for (size_t i = 1; i < path.size (); ++ i) {
+        floating x, y;
+        camera.raster (path[i], x, y);
+        buf.drawLine (prevX, prevY, x, y, 2 * cols[std::min (i-1, 6ul)]);
+        prevX = x;
+        prevY = y;
+      }
+    }
+
 private:
 
     static inline floating mis (floating x) { return x; }
@@ -235,7 +268,7 @@ private:
 
         return nullptr;
     }
-      
+
     PathState generateLightSample () const {
         Light* light = pickLight ();
 
@@ -250,7 +283,7 @@ private:
         st.length = 1;
         st.isFinite = light->isFinite ();
         st.dVCM = mis (directPdfW / emissionPdfW);
-        st.dVC = light->isDelta () ? 0.0 : mis (e.cosTheta / emissionPdfW); 
+        st.dVC = light->isDelta () ? 0.0 : mis (e.cosTheta / emissionPdfW);
         return st;
     }
 
@@ -271,7 +304,7 @@ private:
         st.dVC = 0.0;
         return st;
     }
-    
+
     Colour getLightRadiance (Light* light, const PathState& cameraState, Point hitpoint, Vector dir) const {
         const auto lightPickPr = light->samplingPr ();
         const auto r = light->radiance (hitpoint, dir);
@@ -287,9 +320,8 @@ private:
         const auto misWeight = 1.0 / (1.0 + wCamera);
         return misWeight * r.radiance;
     }
-    
+
     // Connect eye and light vertex
-    // TODO: why are we not multiplying with throughputs?
     Colour connectVertices (const Vertex& lightVertex, const BRDF& cameraBrdf, Point hitpoint, const PathState& cameraState) const {
         auto direction = lightVertex.hitpoint - hitpoint;
         const auto sqrDist = direction.sqrlength();
@@ -327,8 +359,7 @@ private:
 
         return contrib;
     }
-    
-    // 
+
     Colour directIllumination (const PathState& cameraState, Point hitpoint, const BRDF& cameraBrdf) const {
         const auto light = pickLight ();
         const auto lightPickPr = light->samplingPr ();
@@ -354,7 +385,7 @@ private:
 
         return contrib;
     }
-    
+
     // Check if point randomly hits the camera.
     void connectToCamera (Framebuffer& buf, const PathState& lightState, Point hitpoint, const BRDF& lightBrdf) const {
         const auto& camera = m_scene.camera ();
@@ -402,7 +433,7 @@ private:
     template <bool LightTracing>
     bool sampleScattering (const BRDF& brdf, Point hitpoint, PathState& state) const {
         const auto sample = brdf.sample<LightTracing>();
-        if (sample.colour.isZero ())
+        if (sample.event == BRDF::NONE || sample.colour.isZero ())
             return false;
 
         const auto contPr = brdf.continuationPr ();
@@ -417,7 +448,7 @@ private:
 
         if (isSpecularEvent) {
             state.dVCM = 0.0;
-            state.dVC = mis(sample.cosTheta);
+            state.dVC *= mis(sample.cosTheta);
         }
         else {
             const auto dVCM = mis (1.0 / brdfDirPdfW);
@@ -436,7 +467,7 @@ private:
     inline bool occluded (Point pos, Vector dir, floating dist) const {
         const auto ray = shootRay (pos, dir);
         const auto intr = intersectWithPrims (ray);
-        // tolerance to avoid self intersections... 
+        // tolerance to avoid self intersections...
         // TODO think if this is actually correct...
         const auto tolerance = 2*ray_epsilon;
         if (intr.hasIntersections () && 0 <= intr.dist() && intr.dist () < dist - tolerance)

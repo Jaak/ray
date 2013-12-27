@@ -57,7 +57,7 @@ public: /* Methods: */
 
     RadianceResult radiance (Point, Vector dir) const override {
         const auto cosNormal = m_frame.normal ().dot (- dir);
-        if (cosNormal < epsilon)
+        if (cosNormal <= 0.0)
             return {};
 
         return {intensity (), m_invArea * cosNormal / M_PI, m_invArea};

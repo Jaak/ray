@@ -27,28 +27,27 @@ public:
     , m_u { u }
     , m_v { v }
     , m_normal { normalised (u.cross (v)) }
-    , m_d { -m_normal.dot (m_point) }
   { }
 
-  void intersect (const Ray& ray, Intersection& intr) const {
-    const auto O = ray.origin();
-    const auto D = ray.dir();
-    floating a = m_normal.dot(D);
-
-    if (almost_zero(a)) {
+  void intersect(const Ray& ray, Intersection& intr) const {
+    const auto D = ray.dir ();
+    const auto pvec = D.cross (m_v);
+    const auto det = m_u.dot (pvec);
+    if (det == 0.0)
       return;
-    }
 
-    a = -(m_normal.dot(O) + m_d) / a;
-    const Vector vs[] = { m_point - O, m_point + m_u - O, m_point + m_u + m_v - O, m_point + m_v - O};
-    const Vector pmo = a * ray.dir();
-    for (size_t i = 0; i <= 3; ++ i) {
-      const auto j = (i + 1) % 4;
-      if (vs[j].cross(vs[i]).dot(pmo) < 0)
-        return;
-    }
+    const auto invDet = 1.0 / det;
+    const auto tvec = ray.origin () - m_point;
+    const auto u = tvec.dot (pvec) * invDet;
+    if (u < 0.0 || u > 1.0)
+      return;
 
-    intr.update(ray, this, a);
+    const auto qvec = tvec.cross (m_u);
+    const auto v = D.dot (qvec) * invDet;
+    if (v < 0.0 || v > 1.0)
+      return;
+
+    intr.update (ray, this, m_v.dot (qvec) * invDet);
   }
 
   Vector normal(const Point&) const { return m_normal; }
@@ -72,7 +71,6 @@ public:
 protected:
   const Point m_point;
   const Vector m_u, m_v, m_normal;
-  const floating m_d;
 };
 
 #endif
