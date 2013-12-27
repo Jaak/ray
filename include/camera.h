@@ -18,6 +18,7 @@ public: /* Methods: */
   size_t height() const { return m_height; }
   size_t width() const { return m_width; }
   floating imagePlaneDistance () const { return m_imagePlaneDistance; }
+  Vector eye () const { return m_eye; }
   Vector forward () const { return m_forward; }
   bool raster (Point worldPoint, floating& x, floating& y) const;
 

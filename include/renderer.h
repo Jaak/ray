@@ -25,7 +25,7 @@ public: /* Methods: */
 
 protected:
 
-  virtual Colour render (Ray ray) = 0;
+  virtual Colour render (Ray ray);
 
 protected: /* Fields: */
   const Scene& m_scene;

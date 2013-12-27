@@ -12,7 +12,7 @@ public: /* Methods: */
     Materials ()
         : m_materials ()
     {
-        m_materials.emplace_back (Material { });
+        m_materials.emplace_back (Material { Colour {0, 0, 0} });
     }
 
     material_index_t registerMaterial(Material mat) {
@@ -24,6 +24,8 @@ public: /* Methods: */
     const Material& operator[](material_index_t idx) const {
         return m_materials[idx];
     }
+
+    static material_index_t lightMaterial () { return 0; }
 
     void shrink_to_fit() { impl_t(m_materials).swap(m_materials); }
 

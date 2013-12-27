@@ -108,11 +108,10 @@ void do_sphere_light(Scene &scene, FILE *fp) {
     const auto intensity = Colour{r, g, b};
     const auto pos = Point{x, y, z};
     const floating rad = R;
-    const auto mat = Material{ intensity };
 
     Light* light = new SphereLight{scene.sceneSphere(), intensity,  pos, rad};
     Primitive* prim = new Sphere{pos, rad};
-    prim->setMaterial(scene.materials().registerMaterial(mat));
+    prim->setMaterial(Materials::lightMaterial ());
     prim->setLight(light);
     scene.addPrimitive(prim);
     scene.addLight(light);
@@ -128,14 +127,13 @@ void do_area_light (Scene& scene, FILE* fp) {
     }
 
     const auto intensity = Colour {r, g, b};
-    const auto mat = Material {intensity};
     const auto pos = Point {x, y, z};
     const auto u = Vector {ux, uy, uz};
     const auto v = Vector {vx, vy, vz};
 
     Light* light = new AreaLight {scene.sceneSphere(), intensity, pos, u, v};
     Primitive* prim = new Rectangle {pos, u, v};
-    prim->setMaterial(scene.materials().registerMaterial(mat));
+    prim->setMaterial(Materials::lightMaterial ());
     prim->setLight(light);
     scene.addPrimitive(prim);
     scene.addLight(light);

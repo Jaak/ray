@@ -4,6 +4,11 @@
 #include "camera.h"
 #include "random.h"
 
+Colour Renderer::render (Ray) {
+    return {0, 0, 0};
+}
+
+
 void Renderer::render (Framebuffer& buf) {
     const auto& camera = m_scene.camera ();
     for (size_t x = 0; x < buf.width (); ++ x) {

@@ -12,6 +12,7 @@
 #include "table.h"
 #include "renderer.h"
 #include "brdf.h"
+#include "framebuffer.h"
 
 
   /*****************************
@@ -80,18 +81,35 @@ public: /* Methods: */
       : Renderer { s }
       , m_misVmWeightFactor {0.0}
       , m_misVcWeightFactor {0.0}
+      , m_lightSubpathCount {1.0}
     { }
 
     std::unique_ptr<Renderer> clone () const {
         return std::unique_ptr<Renderer> {new VCMRenderer {m_scene}};
     }
 
-    Colour render (Ray cameraRay) {
+    void render (Framebuffer& buf) override {
+        const auto& camera = scene ().camera ();
+        m_lightSubpathCount = buf.width () * buf.height ();
         const floating radius = 1e-03;
         const floating radiusSqr = radius * radius;
-        const floating etaVCM = (M_PI * radiusSqr) / 1.0;
-        m_misVmWeightFactor = 0.0;
+        const floating etaVCM = (M_PI * radiusSqr) * m_lightSubpathCount;
+        m_misVmWeightFactor = 0.0; // mis (etaVCM);
         m_misVcWeightFactor = mis (1.0 / etaVCM);
+
+
+        for (size_t x = 0; x < buf.width (); ++ x) {
+            for (size_t y = 0; y < buf.height (); ++ y) {
+                const auto dx = rng () - 0.5;
+                const auto dy = rng () - 0.5;
+                const auto ray = camera.spawnRay (x + dx, y + dy);
+                const auto col = render (buf, ray);
+                buf.addColour (x, y, col);
+            }
+        }
+    }
+
+    Colour render (Framebuffer& buf, Ray cameraRay) {
 
         std::vector<Vertex> lightVertices;
         PathState lightState = generateLightSample ();
@@ -125,7 +143,7 @@ public: /* Methods: */
             // Don't connect specular vertices to camera
             if (! lightBrdf.isDelta ()) {
                 if (lightState.length + 1 >= MIN_PATH_LENGTH) {
-                    connectToCamera (lightState, hitpoint, lightBrdf);
+                    connectToCamera (buf, lightState, hitpoint, lightBrdf);
                 }
             }
 
@@ -249,7 +267,7 @@ private:
         st.throughput = Colour {1, 1, 1};
         st.length = 1;
         st.isFinite = true;
-        st.dVCM = mis (1.0 / cameraPdfW);
+        st.dVCM = mis (m_lightSubpathCount / cameraPdfW);
         st.dVC = 0.0;
         return st;
     }
@@ -338,8 +356,39 @@ private:
     }
     
     // Check if point randomly hits the camera.
-    void connectToCamera (const PathState& /*lightState*/, Point /*hitpoint*/, const BRDF& /*lightBrdf*/) const {
-        // XXX TODO
+    void connectToCamera (Framebuffer& buf, const PathState& lightState, Point hitpoint, const BRDF& lightBrdf) const {
+        const auto& camera = m_scene.camera ();
+        floating x, y;
+        if (! camera.raster (hitpoint, x, y))
+            return;
+
+        auto directionToCamera = camera.eye () - hitpoint;
+        const auto sqrDist = directionToCamera.sqrlength ();
+        const auto distance = std::sqrt (sqrDist);
+        directionToCamera /= distance;
+
+        const auto lightEv = lightBrdf.evaluate (directionToCamera);
+        if (lightEv.colour.isZero ())
+            return;
+
+        const auto brdfRevPdfW = lightEv.revPdfW * lightBrdf.continuationPr ();
+        const auto cosAtCamera = camera.forward ().dot (- directionToCamera);
+        const auto cosToCamera = lightEv.cosTheta;
+        const auto imagePointToCameraDist = camera.imagePlaneDistance () / cosAtCamera;
+        const auto imageToSolidAngleFactor = (imagePointToCameraDist * imagePointToCameraDist) / cosAtCamera;
+        const auto imageToSurfaceFactor = imageToSolidAngleFactor * fabs(cosToCamera) / sqrDist;
+
+        const auto cameraPdfA = imageToSurfaceFactor;
+
+        const auto wLight = mis (cameraPdfA / m_lightSubpathCount) * (m_misVmWeightFactor + lightState.dVCM + lightState.dVC * mis (brdfRevPdfW));
+        const auto misWeight = 1.0 / (wLight + 1.0);
+        const auto surfaceToImageFactor = 1.0 / imageToSurfaceFactor;
+        const auto contrib = misWeight * lightState.throughput * lightEv.colour / (m_lightSubpathCount * surfaceToImageFactor);
+
+        if (contrib.isZero () || occluded (hitpoint, directionToCamera, distance))
+            return;
+
+        buf.addColour (x, y, contrib);
     }
 
     bool sampleLightScattering (const BRDF& lightBrdf, Point hitpoint, PathState& lightState) const {
@@ -390,7 +439,7 @@ private:
         // tolerance to avoid self intersections... 
         // TODO think if this is actually correct...
         const auto tolerance = 2*ray_epsilon;
-        if (intr.hasIntersections () && tolerance < intr.dist() && intr.dist () < dist - tolerance)
+        if (intr.hasIntersections () && 0 <= intr.dist() && intr.dist () < dist - tolerance)
             return true;
 
         return false;
@@ -403,6 +452,7 @@ private:
 private: /* Fields: */
     floating m_misVmWeightFactor;
     floating m_misVcWeightFactor;
+    floating m_lightSubpathCount;
 };
 
 #endif
