@@ -3,7 +3,6 @@
 #include "framebuffer.h"
 #include "light.h"
 #include "parser.h"
-#include "pixel.h"
 #include "primitive_manager.h"
 #include "renderer.h"
 #include "scene.h"
