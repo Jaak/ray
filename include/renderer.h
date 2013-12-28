@@ -17,7 +17,7 @@ public: /* Methods: */
 
   virtual ~Renderer () { }
 
-  virtual void render (Framebuffer& buf);
+  virtual void render (Framebuffer& buf, size_t iter);
 
   virtual std::unique_ptr<Renderer> clone () const = 0;
 

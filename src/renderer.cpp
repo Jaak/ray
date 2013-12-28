@@ -9,7 +9,7 @@ Colour Renderer::render (Ray) {
 }
 
 
-void Renderer::render (Framebuffer& buf) {
+void Renderer::render (Framebuffer& buf, size_t) {
     const auto& camera = m_scene.camera ();
     for (size_t x = 0; x < buf.width (); ++ x) {
         for (size_t y = 0; y < buf.height (); ++ y) {
