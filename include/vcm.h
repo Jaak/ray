@@ -421,7 +421,7 @@ private:
         const auto cameraBrdfDirPdfA = pdfWtoA(cameraBrdfDirPdfW, distance, lightEv.cosTheta);
         const auto lightBrdfDirPdfA = pdfWtoA(lightBrdfDirPdfW, distance, camEv.cosTheta);
 
-        const auto wLight = mis(cameraBrdfDirPdfA) * (m_misVcWeightFactor + lightVertex.dVCM + lightVertex.dVC * mis (lightBrdfRevPdfW));
+        const auto wLight = mis(cameraBrdfDirPdfA) * (m_misVmWeightFactor + lightVertex.dVCM + lightVertex.dVC * mis (lightBrdfRevPdfW));
         const auto wCamera = mis(lightBrdfDirPdfA) * (m_misVmWeightFactor + cameraState.dVCM + cameraState.dVC * mis (cameraBrdfRevPdfW));
         const auto misWeight = 1.0 / (wLight + 1.0 + wCamera);
 
