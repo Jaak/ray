@@ -32,8 +32,8 @@ private: /* Types: */
         Point     hitpoint;
         Vector    direction;
         Colour    throughput;
-        size_t    length;
-        bool      isFinite;
+        bool      isFinite : 1;
+        uint16_t  length : 15;
 
         floating  dVCM;
         floating  dVC;
@@ -43,8 +43,8 @@ private: /* Types: */
     struct Vertex {
         Point      hitpoint;
         Colour     throughput;
-        size_t     length;
         BRDF       brdf;
+        uint16_t   length;
 
         floating   dVCM;
         floating   dVC;
@@ -54,8 +54,8 @@ private: /* Types: */
         Vertex (Point hitpoint, const PathState& st, const BRDF& brdf)
             : hitpoint (hitpoint)
             , throughput (st.throughput)
-            , length (st.length)
             , brdf (brdf)
+            , length (st.length)
             , dVCM (st.dVCM)
             , dVC (st.dVC)
             , dVM (st.dVM)
@@ -103,8 +103,8 @@ public: /* Methods: */
         m_lightSubpathCount = buf.width () * buf.height ();
 
         floating radius = INITIAL_RADIUS;
-        radius = std::pow ((floating)(iter + 1), 0.5 * (1.0 - RADIUS_ALPHA));
-        radius = std::max (radius, epsilon);
+        radius /= std::pow ((floating)(iter + 1), 0.5 * (1.0 - RADIUS_ALPHA));
+        radius  = std::max (radius, epsilon);
 
         const floating sqrRadius = radius * radius;
         const floating etaVCM = (M_PI * sqrRadius) * m_lightSubpathCount;
@@ -120,12 +120,14 @@ public: /* Methods: */
         for (size_t x = 0; x < buf.width (); ++ x) {
             for (size_t y = 0; y < buf.height (); ++ y) {
                 generateLightPath (buf);
+                m_lightPathBegins.push_back (m_lightVertices.size ());
             }
         }
 
         // Build hash grid of light paths:
         const auto numCells = buf.width () * buf.height ();
-        const auto& hashGrid = HashGrid { m_lightVertices.begin (), m_lightVertices.end (), numCells, radius };
+        m_hashGrid.build (m_lightVertices.begin (), m_lightVertices.end (),
+            numCells, radius);
 
         // Generate all camera paths:
         uint32_t pathIdx = 0;
@@ -134,13 +136,13 @@ public: /* Methods: */
                 const auto dx = rng ();
                 const auto dy = rng ();
                 const auto ray = camera.spawnRay (x + dx, y + dy);
-                const auto col = generateCameraPath (hashGrid, buf, ray, pathIdx ++);
+                const auto col = generateCameraPath (buf, ray, pathIdx ++);
                 buf.addColour (x, y, col);
             }
         }
     }
 
-    // Generate a single light path
+    // Generate and store a single light path.
     void generateLightPath (Framebuffer& buf) {
         PathState lightState = generateLightSample ();
         for (;; ++ lightState.length) {
@@ -185,12 +187,10 @@ public: /* Methods: */
             if (! sampleLightScattering (lightBrdf, hitpoint, lightState))
                 break;
         }
-
-        m_lightPathBegins.push_back (m_lightVertices.size ());
     }
 
     // render a single camera path
-    Colour generateCameraPath (const HashGrid& hashGrid, Framebuffer& buf, Ray cameraRay, uint32_t pathIdx) {
+    Colour generateCameraPath (Framebuffer& buf, Ray cameraRay, uint32_t pathIdx) {
         auto colour = Colour {0, 0, 0};
 
         PathState cameraState = generateCameraSample (cameraRay);
@@ -281,7 +281,7 @@ public: /* Methods: */
                         col += misWeight * camEv.colour * lightVertex.throughput;
                     };
 
-                hashGrid.visit (m_lightVertices.begin (), hitpoint, visitor);
+                m_hashGrid.visit (m_lightVertices.begin (), hitpoint, visitor);
                 colour += cameraState.throughput * m_vmNormalization * col;
             }
 
@@ -309,13 +309,17 @@ public: /* Methods: */
       };
 
       floating prevX, prevY;
-      camera.raster (path.front (), prevX, prevY);
-      for (size_t i = 1; i < path.size (); ++ i) {
+      bool first = true;
+      size_t col = 0;
+      for (size_t i = 0; i < path.size (); ++ i) {
         floating x, y;
         camera.raster (path[i], x, y);
-        buf.drawLine (prevX, prevY, x, y, 2 * cols[std::min (i-1, 6ul)]);
+        if (! first)
+            buf.drawLine (prevX, prevY, x, y, 2 * cols[std::min (col ++, 6ul)]);
+
         prevX = x;
         prevY = y;
+        first = false;
       }
     }
 
@@ -523,7 +527,7 @@ private:
             const auto dVCM = mis (1.0 / brdfDirPdfW);
             const auto dVC = mis (sample.cosTheta / brdfDirPdfW) *
                 (state.dVC*mis(brdfRevPdfW) + state.dVCM + m_misVmWeightFactor);
-            const auto dVM = mis (sample.cosTheta / brdfRevPdfW) *
+            const auto dVM = mis (sample.cosTheta / brdfDirPdfW) *
                 (state.dVM*mis(brdfRevPdfW) + state.dVCM * m_misVcWeightFactor + 1.0);
             state.dVCM = dVCM;
             state.dVC  = dVC;
@@ -555,6 +559,7 @@ private:
 private: /* Fields: */
     std::vector<Vertex>   m_lightVertices;
     std::vector<uint32_t> m_lightPathBegins;
+    HashGrid              m_hashGrid;
     floating              m_misVmWeightFactor;
     floating              m_misVcWeightFactor;
     floating              m_lightSubpathCount;

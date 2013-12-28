@@ -111,13 +111,15 @@ void Scene::run() {
 
     threads.join_all();
 
-    //// To dump the kd-tree or whatever structure on the screen:
-    // m_manager->debugDrawOnFramebuffer (m_camera, actualBuffer);
-    // for (size_t x = 0; x < width; ++ x) {
-    //     for (size_t y = 0; y < height; ++ y) {
-    //         updatePixel (x, y, actualBuffer (x, y));
-    //     }
-    // }
+    // To dump the kd-tree or whatever structure on the screen:
+#if 0
+    m_manager->debugDrawOnFramebuffer (m_camera, actualBuffer);
+    for (size_t x = 0; x < width; ++ x) {
+        for (size_t y = 0; y < height; ++ y) {
+            updatePixel (x, y, actualBuffer (x, y));
+        }
+    }
+#endif
 
     const auto td =
         time_period(start_time, microsec_clock::local_time()).length();

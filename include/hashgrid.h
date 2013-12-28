@@ -17,15 +17,23 @@ public: /* Methods: */
     HashGrid (const HashGrid&) = delete;
     HashGrid& operator = (const HashGrid&) = delete;
 
+    HashGrid ()
+        : m_sqrRadius {0.0}
+        , m_invCellSize {0.0}
+    { }
+
+
+    // Iter::value_type must have method "position" returning a Point defined.
     template <typename Iter>
-    HashGrid (Iter begin, Iter end, size_t numCells, floating radius)
-        : m_indices (std::distance (begin, end), 0)
-        , m_cellBegins (numCells + 1, 0)
-        , m_sqrRadius {radius * radius}
-        , m_invCellSize {1.0 / (2.0 * radius)}
-    {
+    void build (Iter begin, Iter end, size_t numCells, floating radius) {
+        assert (radius != 0.0);
         assert (numCells <= std::numeric_limits<index_t>::max ());
         assert (std::distance (begin, end) <= std::numeric_limits<index_t>::max ());
+
+        m_indices.assign (std::distance (begin, end), 0);
+        m_cellBegins.assign (numCells + 1, 0);
+        m_sqrRadius = radius * radius;
+        m_invCellSize = 1.0 / (2.0 * radius);
 
         for (size_t i = 0; i < 3; ++ i) {
             m_minCoord[i] = std::numeric_limits<floating>::max ();
@@ -57,12 +65,6 @@ public: /* Methods: */
     template <typename Iter, typename F>
     void visit (Iter begin, Point pos, F visitor) const {
         const auto distMin = pos - m_minCoord;
-
-        for (size_t i = 0; i < 3; ++ i) {
-            // sanity check
-            assert (0 <= distMin[i]);
-        }
-
         const auto cellPt = m_invCellSize * distMin;
 
         floating fx, fy, fz;
@@ -114,9 +116,8 @@ private: /* Fields: */
     Point m_minCoord;
     std::vector<index_t> m_indices;
     std::vector<index_t> m_cellBegins;
-
-    const floating m_sqrRadius;
-    const floating m_invCellSize;
+    floating m_sqrRadius;
+    floating m_invCellSize;
 };
 
 #endif

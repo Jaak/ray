@@ -44,6 +44,11 @@ struct Node {
                (m_right ? m_right->treeSize() : 0);
   }
 
+  size_t depth() const {
+    return 1 + std::max(m_left ? m_left->depth() : 0,
+                        m_right ? m_right->depth() : 0);
+  };
+
   PrimPtr* prims () { return &m_prims[0]; }
 
   // TODO: return std::unique_ptr?
@@ -104,7 +109,7 @@ KdTreePrimitiveManager::~KdTreePrimitiveManager() {
 
 void drawTree (const Camera& cam, Framebuffer& buf, const Aabb& box, const Node* node) {
     if (node == nullptr) {
-        buf.drawAabb (cam, box, Colour {1, 1, 1});
+        buf.drawAabb (cam, box, Colour {0.333, 0.333, 0.333});
         return;
     }
 
@@ -116,6 +121,7 @@ void drawTree (const Camera& cam, Framebuffer& buf, const Aabb& box, const Node*
 
 void KdTreePrimitiveManager::debugDrawOnFramebuffer (const Camera& cam, Framebuffer& buf) const {
     drawTree (cam, buf, m_bbox, m_root);
+    buf.drawAabb (cam, m_bbox, Colour { 1, 0, 0});
 }
 
 bool intersectAabb(const Aabb& box, const Ray& ray, floating& a, floating& b) {
@@ -194,6 +200,7 @@ floating getOptimalSplitPosition(const PrimList& plist, Aabb const& box, Axes& a
   floating bestCost = std::numeric_limits<floating>::max();
   floating bestPos = -1.0;
   axis = Axes::X;
+  const auto C = 1.0 / box.area ();
 
   for (Axes i = Axes::X; i != Axes::None; ++i) {
     j = 0;
@@ -209,22 +216,27 @@ floating getOptimalSplitPosition(const PrimList& plist, Aabb const& box, Axes& a
     lc = 0;
     rc = len;
 
+    floating previousSplitPos = -1.0;
     for (Split split : splts) {
-      if (split.side == LEFT)
-        ++lc;
+        if (split.side == LEFT)
+          ++lc;
 
-      const auto pos = split.pos;
-      box.split_at(left, right, i, pos);
-      const auto cost = left.area() * lc + right.area() * rc;
+        if (split.pos != previousSplitPos) {
+          const auto pos = split.pos;
+          box.split_at(left, right, i, pos);
+          const auto cost = C * (left.area() * lc + right.area() * rc);
 
-      if (cost < bestCost) {
-        bestCost = cost;
-        bestPos = pos;
-        axis = i;
-      }
+          if (cost < bestCost) {
+            bestCost = cost;
+            bestPos = pos;
+            axis = i;
+          }
+        }
 
-      if (split.side == RIGHT)
-        --rc;
+        if (split.side == RIGHT)
+          --rc;
+
+        previousSplitPos = split.pos;
     }
   }
 
@@ -232,8 +244,8 @@ floating getOptimalSplitPosition(const PrimList& plist, Aabb const& box, Axes& a
 }
 
 Node *buildKDTree(const PrimList &prims, const Aabb &box, int depth = 0) {
-  if (prims.empty())
-    return Node::make();
+  if (prims.size () < 4)
+    return Node::make(prims);
 
   if (depth >= 20)
     return Node::make(prims);
@@ -284,7 +296,8 @@ void KdTreePrimitiveManager::init() {
   }
 
   m_root = buildKDTree(m_prims, m_bbox);
-  std::cerr << "KD Tree built! Tree has " << m_root->treeSize() << " nodes."
+  std::cerr << "KD Tree built! Tree has " << m_root->treeSize()
+            << " nodes and has " << m_root->depth () << " levels."
             << std::endl;
 }
 
