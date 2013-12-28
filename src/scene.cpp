@@ -93,7 +93,7 @@ void Scene::run() {
             auto renderer = m_renderer->clone ();
             for (size_t j = i; j < m_samples; j += nP) {
                 frame.clear ();
-                renderer->render (frame);
+                renderer->render (frame, j);
                 boost::mutex::scoped_lock scoped_lock (actualFramebufferMutex);
                 ++ count;
                 for (size_t x = 0; x < width; ++ x) {
