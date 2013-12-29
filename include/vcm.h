@@ -32,8 +32,8 @@ private: /* Types: */
         Point     hitpoint;
         Vector    direction;
         Colour    throughput;
-        bool      isFinite : 1;
-        uint16_t  length : 15;
+        bool      isFinite;
+        uint16_t  length;
 
         floating  dVCM;
         floating  dVC;
@@ -65,6 +65,48 @@ private: /* Types: */
             return hitpoint;
         }
     };
+
+    // possibly drop in quality for stored vertices.
+    // This is to reduce the storage requirements.
+    struct StoredVertex {
+        Point    hitpoint;
+        float    r, g, b;
+        float    theta;
+        float    phi;
+        float    dVCM;
+        float    dVM;
+        float    continuationPr;
+        uint16_t length;
+
+        explicit StoredVertex (const Vertex& v)
+            : hitpoint {v.hitpoint}
+            , r {(float) v.throughput.r}
+            , g {(float) v.throughput.g}
+            , b {(float) v.throughput.b}
+            , theta {0}, phi {0}
+            , dVCM {(float) v.dVCM}
+            , dVM {(float) v.dVM}
+            , continuationPr {(float) v.brdf.continuationPr ()}
+            , length {v.length}
+        {
+            const auto dir = v.brdf.worldDirFix ();
+            theta = (float) acos (dir.z);
+            phi = (float) atan2 (dir.y, dir.x);
+        }
+
+        Point position () const { return hitpoint; }
+        Colour throughput () const { return Colour {r, g, b}; }
+        Vector worldDirFix () const {
+            const auto T1 = sin (theta);
+            return {
+                T1 * cos (phi),
+                T1 * sin (phi),
+                cos (theta)
+            };
+        }
+    };
+
+    using StoredVertices = std::vector<StoredVertex>;
 
 private: /* Methods: */
 
@@ -102,48 +144,60 @@ public: /* Methods: */
         const auto& camera = scene ().camera ();
         m_lightSubpathCount = buf.width () * buf.height ();
 
+        // Compute merging radius:
         floating radius = INITIAL_RADIUS;
         radius /= std::pow ((floating)(iter + 1), 0.5 * (1.0 - RADIUS_ALPHA));
-        radius  = std::max (radius, epsilon);
+        radius  = std::max (radius, 4 * epsilon);
 
+        // Compute various weights:
         const floating sqrRadius = radius * radius;
         const floating etaVCM = (M_PI * sqrRadius) * m_lightSubpathCount;
         m_misVmWeightFactor = mis (etaVCM);
         m_misVcWeightFactor = mis (1.0 / etaVCM);
         m_vmNormalization = 1.0 / etaVCM; // huh? not really sure about this
 
-        m_lightVertices.clear ();
-        m_lightPathBegins.clear ();
-        m_lightPathBegins.push_back (0);
+        // Clear current vertices:
+        m_currentVertices.clear ();
 
-        // Generate all light paths:
-        for (size_t x = 0; x < buf.width (); ++ x) {
-            for (size_t y = 0; y < buf.height (); ++ y) {
-                generateLightPath (buf);
-                m_lightPathBegins.push_back (m_lightVertices.size ());
+        // We might have to initialize some vertices:
+        if (m_previousVertices.empty ()) {
+            for (size_t x = 0; x < buf.width (); ++ x) {
+                for (size_t y = 0; y < buf.height (); ++ y) {
+                    generateLightPath (buf);
+                    for (const auto& lightVertex : m_lightPath)
+                        m_previousVertices.emplace_back (lightVertex);
+                }
             }
         }
 
-        // Build hash grid of light paths:
+        // Build hash grid of vertices of previous frame:
         const auto numCells = buf.width () * buf.height ();
-        m_hashGrid.build (m_lightVertices.begin (), m_lightVertices.end (),
+        m_hashGrid.build (m_previousVertices.begin (), m_previousVertices.end (),
             numCells, radius);
 
         // Generate all camera paths:
-        uint32_t pathIdx = 0;
         for (size_t x = 0; x < buf.width (); ++ x) {
             for (size_t y = 0; y < buf.height (); ++ y) {
+                // Generate and store a single light path:
+                generateLightPath (buf);
+                for (const auto& lightVertex : m_lightPath)
+                    m_currentVertices.emplace_back (lightVertex);
+
+                // Generate a single camera path:
                 const auto dx = rng ();
                 const auto dy = rng ();
                 const auto ray = camera.spawnRay (x + dx, y + dy);
-                const auto col = generateCameraPath (buf, ray, pathIdx ++);
+                const auto col = generateCameraPath (buf, ray);
                 buf.addColour (x, y, col);
             }
         }
+
+        std::swap (m_currentVertices, m_previousVertices);
     }
 
     // Generate and store a single light path.
     void generateLightPath (Framebuffer& buf) {
+        m_lightPath.clear ();
         PathState lightState = generateLightSample ();
         for (;; ++ lightState.length) {
             const auto ray = shootRay (lightState.hitpoint, lightState.direction);
@@ -170,7 +224,7 @@ public: /* Methods: */
 
             // Don't store path vertices for purely specular surfaces.
             if (! lightBrdf.isDelta ()) {
-                m_lightVertices.emplace_back (hitpoint, lightState, lightBrdf);
+                m_lightPath.emplace_back (hitpoint, lightState, lightBrdf);
             }
 
             // Don't connect specular vertices to camera
@@ -190,7 +244,7 @@ public: /* Methods: */
     }
 
     // render a single camera path
-    Colour generateCameraPath (Framebuffer& buf, Ray cameraRay, uint32_t pathIdx) {
+    Colour generateCameraPath (Framebuffer& buf, Ray cameraRay) {
         auto colour = Colour {0, 0, 0};
 
         PathState cameraState = generateCameraSample (cameraRay);
@@ -243,10 +297,7 @@ public: /* Methods: */
 
             // Connect to light vertices
             if (! cameraBrdf.isDelta ()) {
-                const auto begin = m_lightPathBegins[pathIdx];
-                const auto end = m_lightPathBegins[pathIdx + 1];
-                for (uint32_t i = begin; i < end; ++ i) {
-                    const auto& lightVertex = m_lightVertices[i];
+                for (const auto& lightVertex : m_lightPath) {
                     const auto pathLength = lightVertex.length + 1 + cameraState.length;
                     if (pathLength < MIN_PATH_LENGTH)
                         continue;
@@ -263,25 +314,25 @@ public: /* Methods: */
             if (! cameraBrdf.isDelta ()) {
                 auto col = Colour {0, 0, 0};
                 const auto visitor =
-                    [this, &col, &hitpoint, &cameraBrdf, &cameraState](const Vertex& lightVertex) -> void {
+                    [this, &col, &hitpoint, &cameraBrdf, &cameraState](const StoredVertex& lightVertex) -> void {
                         const auto pathLength = cameraState.length + lightVertex.length;
                         if (pathLength < MIN_PATH_LENGTH || pathLength > MAX_PATH_LENGTH)
                             return;
 
-                        const auto lightDirection = lightVertex.brdf.worldDirFix ();
+                        const auto lightDirection = lightVertex.worldDirFix ();
                         const auto camEv = cameraBrdf.evaluate (lightDirection);
                         if (camEv.colour.isZero ())
                             return;
 
                         const auto cameraBrdfDirPdfW = camEv.dirPdfW * cameraBrdf.continuationPr ();
-                        const auto cameraBrdfRevPdfW = camEv.revPdfW * lightVertex.brdf.continuationPr ();
+                        const auto cameraBrdfRevPdfW = camEv.revPdfW * lightVertex.continuationPr;
                         const auto wLight = lightVertex.dVCM * m_misVcWeightFactor + lightVertex.dVM * mis (cameraBrdfDirPdfW);
                         const auto wCamera = cameraState.dVCM * m_misVcWeightFactor + cameraState.dVM * mis (cameraBrdfRevPdfW);
                         const auto misWeight = 1.0 / (wLight + 1.0 + wCamera);
-                        col += misWeight * camEv.colour * lightVertex.throughput;
+                        col += misWeight * camEv.colour * lightVertex.throughput ();
                     };
 
-                m_hashGrid.visit (m_lightVertices.begin (), hitpoint, visitor);
+                m_hashGrid.visit (m_previousVertices.begin (), hitpoint, visitor);
                 colour += cameraState.throughput * m_vmNormalization * col;
             }
 
@@ -557,9 +608,10 @@ private:
     }
 
 private: /* Fields: */
-    std::vector<Vertex>   m_lightVertices;
-    std::vector<uint32_t> m_lightPathBegins;
-    HashGrid              m_hashGrid;
+    StoredVertices        m_previousVertices; ///< Light paths from previous frame.
+    HashGrid              m_hashGrid; ///< Acceleration structure over previous ligh paths.
+    StoredVertices        m_currentVertices; ///< Light paths currently being generated.
+    std::vector<Vertex>   m_lightPath; ///< A single light path that is currently being generated.
     floating              m_misVmWeightFactor;
     floating              m_misVcWeightFactor;
     floating              m_lightSubpathCount;
