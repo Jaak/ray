@@ -36,10 +36,14 @@ public: /* Methods: */
     Framebuffer& operator = (const Framebuffer&) = delete;
 
     /**
-     * Guarantees that the given pixel is in consistent state.
-     * Does not flush all framebuffer updates.
+     * Guarantees that the given pixel is in consistent state.  Does not flush
+     * all framebuffer updates.
      */
     Colour getPixel (size_t x, size_t y) const;
+
+    /**
+     * Flush cached updates for the current thread.
+     */
     void flushUpdates ();
 
     /**
@@ -48,7 +52,9 @@ public: /* Methods: */
     void clear();
 
     /**
-     * This method is cached.
+     * This method caches the updates thread locally. Most of the time it
+     * doesn't block and framebuffer lock is grabbed only when update buffer is
+     * full.
      */
     void addColour (size_t x, size_t y, Colour col);
 
