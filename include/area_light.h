@@ -34,7 +34,7 @@ public: /* Methods: */
             return {};
 
         const auto directPdfW = m_invArea * distSqr / cosNormal;
-        const auto emissionPdfW = m_invArea * cosNormal / M_PI;
+        const auto emissionPdfW = m_invArea * cosNormal * RAY_INV_PI;
         return {intensity (), direction, distance, directPdfW, emissionPdfW, cosNormal};
     }
 
@@ -60,7 +60,7 @@ public: /* Methods: */
         if (cosNormal <= 0.0)
             return {};
 
-        return {intensity (), m_invArea * cosNormal / M_PI, m_invArea};
+        return {intensity (), m_invArea * cosNormal * RAY_INV_PI, m_invArea};
     }
 
 private: /* Fields: */

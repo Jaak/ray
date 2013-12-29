@@ -45,41 +45,53 @@ public: /* Methods: */
       , m_invArea { 1.0 / (4.0 * M_PI * r * r) }
     {}
 
+    // We are sampling points only from hemisphere facing the position.
+    // Thus the area that we are sampling from is 2 times smaller.
     IlluminateResult illuminate (Point pos) const override {
-        const auto localPosVec = sampleUniformSphere ().get ();
-        const auto pointOnSphere = m_center + m_radius * localPosVec;
-        auto direction = pointOnSphere - pos;
+        const auto normal = normalised (pos - m_center);
+        const auto hemisphereVec = sampleUniformHemisphere (). get ();
+        const auto localPosVec = Frame {normal}.toWorld (hemisphereVec);
+        const auto pointOnHemisphere = m_center + m_radius * localPosVec;
+        auto direction = pointOnHemisphere - pos;
         const auto distSqr = direction.sqrlength ();
         const auto distance = std::sqrt (distSqr);
         direction = direction / distance;
-        const auto cosNormal = normalised(pointOnSphere - m_center) . dot(- direction);
+        const auto cosNormal = hemisphereVec.z;
 
-        if (cosNormal < 0.0)
+        if (cosNormal < epsilon)
             return {};
 
-        const auto directPdfW = m_invArea * distSqr / cosNormal;
-        const auto emissionPdfW = m_invArea * cosNormal / M_PI;
-        return {intensity (), direction, distance, directPdfW, emissionPdfW, cosNormal};
+        // 2 times smaller area
+        const auto directPdfW = 2.0 * m_invArea * distSqr / cosNormal;
+        const auto emissionPdfW = 2.0 * m_invArea * cosNormal * RAY_INV_PI;
+        return { intensity (), direction, distance,
+                 directPdfW, emissionPdfW, cosNormal
+        };
     }
 
     EmitResult emit () const override {
+        const auto sample = sampleCosHemisphere ();
+        const auto localDir = sample.get ();
+        const auto cosTheta = localDir.z;
+        if (cosTheta < epsilon)
+            return emit ();
+
         const auto localPosVec = sampleUniformSphere().get();
         const auto pointOnSphere = m_center + m_radius * localPosVec;
         const auto normal = normalised (pointOnSphere - m_center);
         const auto frame = Frame::fromNormalised (normal);
-        const auto sample = sampleCosHemisphere (); // TODO: do we need to reject < epsilon cosTheta?
-        const auto localDir = sample.get ();
-        const auto cosTheta = localDir.z;
         const auto direction = frame.toWorld (localDir);
         const auto emissionPdfW = m_invArea * sample.pdfW ();
         const auto directPdfA = m_invArea;
-        return {cosTheta * intensity (), pointOnSphere, normal, direction, emissionPdfW, directPdfA, cosTheta};
+        return {cosTheta * intensity (), pointOnSphere,
+                normal, direction, emissionPdfW,
+                directPdfA, cosTheta};
     }
 
     RadianceResult radiance (Point pos, Vector dir) const override {
         const auto normal = normalised (pos - m_center);
         const auto cosTheta = normal.dot (- dir);
-        if (cosTheta < 0.0)
+        if (cosTheta <= 0.0)
             return {};
 
         return {intensity (), m_invArea * cosHemispherePdfW (normal, - dir), m_invArea};
