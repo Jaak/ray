@@ -68,18 +68,22 @@ private: /* Types: */
 
     // possibly drop in quality for stored vertices.
     // This is to reduce the storage requirements.
+    // - direction can be stored as 2 16 bit integers
+    // - no need to store length
     struct StoredVertex {
-        Point    hitpoint;
-        float    r, g, b;
-        float    theta;
+        float    x, y, z; // hitpoint;
+        float    r, g, b; // throughput
+        float    theta;   // worldDirFix
         float    phi;
-        float    dVCM;
+        float    dVCM;    // weights
         float    dVM;
         float    continuationPr;
-        uint16_t length;
+        uint8_t  length;  // path length (debugging)
 
         explicit StoredVertex (const Vertex& v)
-            : hitpoint {v.hitpoint}
+            : x {(float) v.hitpoint.x}
+            , y {(float) v.hitpoint.y}
+            , z {(float) v.hitpoint.z}
             , r {(float) v.throughput.r}
             , g {(float) v.throughput.g}
             , b {(float) v.throughput.b}
@@ -94,7 +98,7 @@ private: /* Types: */
             phi = (float) atan2 (dir.y, dir.x);
         }
 
-        Point position () const { return hitpoint; }
+        Point position () const { return Point {x, y, z}; }
         Colour throughput () const { return Colour {r, g, b}; }
         Vector worldDirFix () const {
             const auto T1 = sin (theta);
@@ -312,9 +316,9 @@ public: /* Methods: */
 
             // Vertex merging:
             if (! cameraBrdf.isDelta ()) {
-                auto col = Colour {0, 0, 0};
+                auto contrib = Colour {0, 0, 0};
                 const auto visitor =
-                    [this, &col, &hitpoint, &cameraBrdf, &cameraState](const StoredVertex& lightVertex) -> void {
+                    [this, &contrib, &hitpoint, &cameraBrdf, &cameraState](const StoredVertex& lightVertex) {
                         const auto pathLength = cameraState.length + lightVertex.length;
                         if (pathLength < MIN_PATH_LENGTH || pathLength > MAX_PATH_LENGTH)
                             return;
@@ -329,11 +333,12 @@ public: /* Methods: */
                         const auto wLight = lightVertex.dVCM * m_misVcWeightFactor + lightVertex.dVM * mis (cameraBrdfDirPdfW);
                         const auto wCamera = cameraState.dVCM * m_misVcWeightFactor + cameraState.dVM * mis (cameraBrdfRevPdfW);
                         const auto misWeight = 1.0 / (wLight + 1.0 + wCamera);
-                        col += misWeight * camEv.colour * lightVertex.throughput ();
+                        contrib += misWeight * camEv.colour * lightVertex.throughput ();
                     };
 
-                m_hashGrid.visit (m_previousVertices.begin (), hitpoint, visitor);
-                colour += cameraState.throughput * m_vmNormalization * col;
+                m_hashGrid.visit (m_previousVertices.begin (), m_previousVertices.end (),
+                    hitpoint, visitor);
+                colour += cameraState.throughput * m_vmNormalization * contrib;
             }
 
             // Scatter the light

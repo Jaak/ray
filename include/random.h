@@ -89,13 +89,13 @@ inline Sample<Vector> sampleCosHemisphere () {
     const auto T1 = 2.0 * M_PI * r1;
     const auto T2 = std::sqrt (1.0 - r2);
     const auto vec = Vector { cos(T1)*T2, sin(T1)*T2, std::sqrt(r2) };
-    return make_sample (vec, vec.z / M_PI);
+    return make_sample (vec, vec.z * RAY_INV_PI);
 }
 
-inline floating localCosHemispherePdfW (Vector v) { return v.z / M_PI; }
+inline floating localCosHemispherePdfW (Vector v) { return v.z * RAY_INV_PI; }
 
 inline floating cosHemispherePdfW (Vector normal, Vector dir) {
-    return clamp (normal.dot(dir), 0, 1) / M_PI;
+    return clamp (normal.dot(dir), 0, 1) * RAY_INV_PI;
 }
 
 #endif

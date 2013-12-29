@@ -17,6 +17,10 @@ constexpr floating epsilon = 1e-7; // std::numeric_limits<floating>::epsilon ();
  */
 constexpr floating ray_epsilon = 1e-7;
 
+constexpr floating RAY_PI = (floating) M_PI;
+
+constexpr floating RAY_INV_PI = (floating)(1.0 / RAY_PI);
+
 inline bool almost_equal(floating x, floating y, int ulp = 1) {
   return fabs(x - y) <= epsilon * fmax(fabs(x), fabs(y)) * ulp;
 }

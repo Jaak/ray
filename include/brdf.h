@@ -121,7 +121,7 @@ public: /* Methods: */
         floating revPdfW = 0.0;
 
         const auto localDirGen = m_frame.toLocal (dirGen);
-        if (m_localDirFix.z * localDirGen.z >= 0.0) {
+        if (localDirGen.z * m_localDirFix.z >= 0.0) {
             cosTheta = fabs (localDirGen.z);
             evaluateDiffuse (localDirGen, result, dirPdfW, revPdfW);
             // evaluatePhong (localDirGen, result, dirPdfW, revPdfW);
@@ -190,22 +190,22 @@ private: /* Methods: */
             return;
 
         pdfDiffuse (localDirGen, dirPdfW, revPdfW);
-        result  += m_mat.colour () / M_PI;
+        result  += m_mat.colour () * m_mat.kd ()* RAY_INV_PI;
     }
 
     void pdfDiffuse (Vector localDirGen, floating& dirPdfW, floating& revPdfW) const {
         if (m_diffPr == 0.0)
             return;
 
-        dirPdfW += m_diffPr * fmax (0.0, localDirGen.z / M_PI);
-        revPdfW += m_diffPr * fmax (0.0, m_localDirFix.z / M_PI);
+        dirPdfW += m_diffPr * fmax (0.0, localDirGen.z * RAY_INV_PI);
+        revPdfW += m_diffPr * fmax (0.0, m_localDirFix.z * RAY_INV_PI);
     }
 
     void sampleDiffuse (Colour& result, Vector& dir, floating& pdfW) const {
         if (m_localDirFix.z < epsilon)
             return;
 
-        result += m_mat.colour () / M_PI;
+        result += m_mat.colour () * m_mat.kd () * RAY_INV_PI;
         const auto sample = sampleCosHemisphere ();
         dir = sample.get ();
         pdfW += m_diffPr * sample.pdfW ();
