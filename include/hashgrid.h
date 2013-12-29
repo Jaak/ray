@@ -63,17 +63,16 @@ public: /* Methods: */
     }
 
     template <typename Iter, typename F>
-    void visit (Iter begin, Point pos, F visitor) const {
-        const auto distMin = pos - m_minCoord;
-        const auto cellPt = m_invCellSize * distMin;
+    void visit (Iter begin, Point point, F visitor) const {
+        const auto distMin = point - m_minCoord;
+        const auto coordF = m_invCellSize * distMin;
 
-        floating fx, fy, fz;
-        const index_t px = (index_t) modf (cellPt[0], &fx);
-        const index_t py = (index_t) modf (cellPt[0], &fy);
-        const index_t pz = (index_t) modf (cellPt[0], &fz);
-        const index_t pxo = px + (fx < 0.5 ? -1 : 1);
-        const index_t pyo = py + (fy < 0.5 ? -1 : 1);
-        const index_t pzo = pz + (fz < 0.5 ? -1 : 1);
+        const index_t px = (index_t) std::floor (coordF[0]);
+        const index_t py = (index_t) std::floor (coordF[1]);
+        const index_t pz = (index_t) std::floor (coordF[2]);
+        const index_t pxo = px + (coordF[0] - px < 0.5 ? -1 : 1);
+        const index_t pyo = py + (coordF[1] - py < 0.5 ? -1 : 1);
+        const index_t pzo = pz + (coordF[2] - pz < 0.5 ? -1 : 1);
         const index_t coords[8][3] = {
               {px , py , pz }, {px , py , pzo}, {px , pyo, pz }, {px , pyo, pzo}
             , {pxo, py , pz }, {pxo, py , pzo}, {pxo, pyo, pz }, {pxo, pyo, pzo}
@@ -84,7 +83,7 @@ public: /* Methods: */
             for (size_t j = m_cellBegins[idx]; j < m_cellBegins[idx + 1]; ++ j) {
                 const auto iter = begin + m_indices[j];
                 const auto particlePos = iter->position ();
-                const auto sqrDist = (pos - particlePos).sqrlength ();
+                const auto sqrDist = (point - particlePos).sqrlength ();
                 if (sqrDist <= m_sqrRadius)
                     visitor (*iter);
             }
