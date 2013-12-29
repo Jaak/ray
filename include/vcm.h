@@ -315,7 +315,7 @@ public: /* Methods: */
         floating x, y;
         camera.raster (path[i], x, y);
         if (! first)
-            buf.drawLine (prevX, prevY, x, y, 2 * cols[std::min (col ++, 6ul)]);
+            buf.unsafeDrawLine (prevX, prevY, x, y, 2 * cols[std::min (col ++, 6ul)]);
 
         prevX = x;
         prevY = y;

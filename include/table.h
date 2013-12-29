@@ -32,6 +32,9 @@ public: /* Methods: */
         std::fill (this->begin (), this->end (), value);
     }
 
+    using std::vector<T>::begin;
+    using std::vector<T>::end;
+
 private: /* Fields: */
     const size_t m_width;
     const size_t m_height;

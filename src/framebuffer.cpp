@@ -2,7 +2,51 @@
 #include "camera.h"
 #include "aabb.h"
 
-void Framebuffer::drawAabb (const Camera& cam, const Aabb& box, Colour col) {
+namespace /* anonymous */ {
+
+constexpr size_t updateBufferSize = 1024;
+
+struct FramebufferUpdate {
+    const size_t x;
+    const size_t y;
+    const Colour col;
+
+    FramebufferUpdate (size_t x, size_t y, Colour col)
+        : x {x}, y {y}, col {col}
+    { }
+};
+
+thread_local std::vector<FramebufferUpdate> updateBuffer;
+
+} // namespace anonymous
+
+Colour Framebuffer::getPixel (size_t x, size_t y) const {
+    boost::mutex::scoped_lock scoped_lock {m_mutex};
+    return unsafeGetPixel (x, y);
+}
+
+void Framebuffer::clear () {
+    boost::mutex::scoped_lock scoped_lock {m_mutex};
+    std::fill (begin (), end (), Colour {0, 0, 0});
+}
+
+void Framebuffer::flushUpdates () {
+    boost::mutex::scoped_lock scoped_lock {m_mutex};
+    for (const auto& update : updateBuffer) {
+        unsafeAddColour (update.x, update.y, update.col);
+    }
+
+    updateBuffer.clear ();
+}
+
+void Framebuffer::addColour (size_t x, size_t y, Colour col) {
+    if (updateBuffer.size () >= updateBufferSize)
+        flushUpdates ();
+
+    updateBuffer.emplace_back (x, y, col);
+}
+
+void Framebuffer::unsafeDrawAabb (const Camera& cam, const Aabb& box, Colour col) {
     const auto minToMax = box.m_p2 - box.m_p1;
     const auto u = Vector {minToMax[0], 0, 0 };
     const auto v = Vector {0, minToMax[1], 0 };
@@ -29,11 +73,11 @@ void Framebuffer::drawAabb (const Camera& cam, const Aabb& box, Colour col) {
         const auto v0 = edges[i][0]; const auto v1 = edges[i][1];
         const auto x0 = vs[v0][0]; const auto y0 = vs[v0][1];
         const auto x1 = vs[v1][0]; const auto y1 = vs[v1][1];
-        drawLine (x0, y0, x1, y1, col);
+        unsafeDrawLine (x0, y0, x1, y1, col);
     }
 }
 
-void Framebuffer::drawLine (floating fx0, floating fy0, floating fx1, floating fy1, Colour col) {
+void Framebuffer::unsafeDrawLine (floating fx0, floating fy0, floating fx1, floating fy1, Colour col) {
     fx0 = clamp (fx0, 0, width () - 1);
     fy0 = clamp (fy0, 0, height () - 1);
     fx1 = clamp (fx1, 0, width () - 1);
@@ -46,13 +90,13 @@ void Framebuffer::drawLine (floating fx0, floating fy0, floating fx1, floating f
     const int sy = y0 < y1 ? 1 : -1;
     int err = dx - dy;
     while (true) {
-        (*this)(x0, y0) += col;
+        unsafeAddColour (x0, y0, col);
         if (x0 == x1 && y0 == y1)
             break;
 
         const int e2 = 2 * err;
         if (e2 > -dy) { err -= dy; x0 += sx; }
-        if (x0 == x1 && y0 == y1) { (*this)(x0, y0) += col; break; }
+        if (x0 == x1 && y0 == y1) { unsafeAddColour (x0, y0, col); break; }
         if (e2 < dx) { err += dx; y0 += sy; }
     }
 }

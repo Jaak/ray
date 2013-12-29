@@ -109,7 +109,7 @@ KdTreePrimitiveManager::~KdTreePrimitiveManager() {
 
 void drawTree (const Camera& cam, Framebuffer& buf, const Aabb& box, const Node* node) {
     if (node == nullptr) {
-        buf.drawAabb (cam, box, Colour {0.333, 0.333, 0.333});
+        buf.unsafeDrawAabb (cam, box, Colour {0.333, 0.333, 0.333});
         return;
     }
 
@@ -121,7 +121,7 @@ void drawTree (const Camera& cam, Framebuffer& buf, const Aabb& box, const Node*
 
 void KdTreePrimitiveManager::debugDrawOnFramebuffer (const Camera& cam, Framebuffer& buf) const {
     drawTree (cam, buf, m_bbox, m_root);
-    buf.drawAabb (cam, m_bbox, Colour { 1, 0, 0});
+    buf.unsafeDrawAabb (cam, m_bbox, Colour { 1, 0, 0});
 }
 
 bool intersectAabb(const Aabb& box, const Ray& ray, floating& a, floating& b) {

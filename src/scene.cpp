@@ -80,45 +80,64 @@ void Scene::run() {
     const size_t nP = std::max(boost::thread::hardware_concurrency(), 1u);
     std::cout << "Rendering on " << nP << " threads." << std::endl;
 
-    boost::mutex actualFramebufferMutex;
+    boost::mutex countMutex;
     boost::thread_group threads;
     size_t count = 0;
+    bool done = false;
     const auto width = m_camera.width ();
     const auto height = m_camera.height ();
-    auto actualBuffer = Framebuffer {width, height};
+    Framebuffer frame = {width, height};
+
+    // Spawn rendering threads
     for (size_t i = 0; i < nP; ++ i) {
         const auto renderFunc = [&, i]() {
-            auto frame = Framebuffer {width, height};
             auto renderer = m_renderer->clone ();
             for (size_t j = i; j < m_samples; j += nP) {
-                frame.clear ();
                 renderer->render (frame, j);
-                boost::mutex::scoped_lock scoped_lock (actualFramebufferMutex);
+                frame.flushUpdates ();
+                boost::mutex::scoped_lock scoped_lock (countMutex);
                 ++ count;
-                for (size_t x = 0; x < width; ++ x) {
-                    for (size_t y = 0; y < height; ++ y) {
-                        const auto c = frame (x, y);
-                        actualBuffer (x, y) += (c - actualBuffer (x, y)) / count;
-                        updatePixel (x, y, actualBuffer (x, y));
-                    }
-                }
             }
         };
 
        threads.create_thread (renderFunc);
     }
 
-    threads.join_all();
+    // Spawn display thread
+    const auto displayFunc = [this, &done, &count, &countMutex, &frame]() {
+        while (! done) { // it's ok to use "done" in unsafe manner.
+            size_t localCount = 0;
+            {
+                boost::mutex::scoped_lock scoped_lock (countMutex);
+                localCount = count;
+            }
 
-    // To dump the kd-tree or whatever structure on the screen:
-#if 0
-    m_manager->debugDrawOnFramebuffer (m_camera, actualBuffer);
-    for (size_t x = 0; x < width; ++ x) {
-        for (size_t y = 0; y < height; ++ y) {
-            updatePixel (x, y, actualBuffer (x, y));
+            if (localCount > 0) {
+                for (size_t x = 0; x < frame.width (); ++ x) {
+                    for (size_t y = 0; y < frame.height (); ++ y) {
+                        const auto c = frame.unsafeGetPixel (x, y);
+                        updatePixel (x, y, c / localCount);
+                    }
+                }
+            }
+
+            boost::this_thread::sleep (boost::posix_time::seconds (1));
+        }
+    };
+
+    boost::thread displayThread {displayFunc};
+    threads.join_all();
+    done = true;
+    displayThread.join ();
+
+    // m_manager->debugDrawOnFramebuffer (m_camera, frame);
+
+    for (size_t x = 0; x < frame.width (); ++ x) {
+        for (size_t y = 0; y < frame.height (); ++ y) {
+            const auto c = frame.unsafeGetPixel (x, y);
+            updatePixel (x, y, c / count);
         }
     }
-#endif
 
     const auto td =
         time_period(start_time, microsec_clock::local_time()).length();
