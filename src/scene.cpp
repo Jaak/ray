@@ -59,7 +59,13 @@ void Scene::init() {
     }
   }
 
-  m_manager->init();
+  {
+      using namespace boost::posix_time;
+      const auto start_time = microsec_clock::local_time();
+      m_manager->init();
+      const auto td = time_period(start_time, microsec_clock::local_time()).length();
+      std::cout << "Building acceleration structure took " << td << std::endl << std::endl;
+  }
 }
 
 void Scene::addPrimitive(const Primitive* p) { m_manager->addPrimitive(p); }
