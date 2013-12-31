@@ -3,7 +3,6 @@
 #include "common.h"
 #include "directional_light.h"
 #include "geometry.h"
-#include "itriangle.h"
 #include "material.h"
 #include "point_light.h"
 #include "scene.h"
