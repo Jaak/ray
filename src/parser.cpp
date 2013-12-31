@@ -286,11 +286,11 @@ void do_poly(Scene& scene, FILE* fp) {
   int vertcount;
   COORD3* norms;
   COORD3* verts;
-  COORD2* UVs;
+  COORD2* uvs;
   float x, y, z;
 
   norms = verts = NULL;
-  UVs = NULL;
+  uvs = NULL;
 
   ispatch = getc(fp);
   if (ispatch != 'p') {
@@ -317,8 +317,8 @@ void do_poly(Scene& scene, FILE* fp) {
   }
 
   if (textured) {
-    UVs = (COORD2*)malloc(nverts * sizeof(COORD2));
-    if (UVs == NULL)
+    uvs = (COORD2*)malloc(nverts * sizeof(COORD2));
+    if (uvs == NULL)
       goto memerr;
   }
 
@@ -337,7 +337,7 @@ void do_poly(Scene& scene, FILE* fp) {
     if (textured) {
       if (fscanf(fp, " %f %f", &x, &y) != 2)
         goto fmterr;
-      SET_COORD2(UVs[vertcount], x, y);
+      SET_COORD2(uvs[vertcount], x, y);
     }
   }
 
@@ -354,35 +354,39 @@ void do_poly(Scene& scene, FILE* fp) {
     const auto p1 = i;
     const auto p2 = i + 1;
 
+    const auto point0 = Point {verts[p0][0], verts[p0][1], verts[p0][2]};
+    const auto point1 = Point {verts[p1][0], verts[p1][1], verts[p1][2]};
+    const auto point2 = Point {verts[p2][0], verts[p2][1], verts[p2][2]};
+
     if (ispatch && textured) {
-      p = new ITriangle(
-          Point(verts[p0][0], verts[p0][1], verts[p0][2], UVs[p0][0], UVs[p0][1]),
-          Point(verts[p1][0], verts[p1][1], verts[p1][2], UVs[p1][0], UVs[p1][1]),
-          Point(verts[p2][0], verts[p2][1], verts[p2][2], UVs[p2][0], UVs[p2][1]),
-          Vector(norms[p0][0], norms[p0][1], norms[p0][2]),
-          Vector(norms[p1][0], norms[p1][1], norms[p1][2]),
-          Vector(norms[p2][0], norms[p2][1], norms[p2][2]));
+        const auto n0 = Vector {norms[p0][0], norms[p0][1], norms[p0][2]};
+        const auto n1 = Vector {norms[p1][0], norms[p1][1], norms[p1][2]};
+        const auto n2 = Vector {norms[p2][0], norms[p2][1], norms[p2][2]};
+        const auto v0 = make_vertex (point0, n0, uvs[p0][0], uvs[p0][1]);
+        const auto v1 = make_vertex (point1, n1, uvs[p1][0], uvs[p1][1]);
+        const auto v2 = make_vertex (point2, n2, uvs[p2][0], uvs[p2][1]);
+        p = make_triangle (v0, v1, v2);
     }
     else if (ispatch) {
-      p = new ITriangle(
-          Point(verts[p0][0], verts[p0][1], verts[p0][2]),
-          Point(verts[p1][0], verts[p1][1], verts[p1][2]),
-          Point(verts[p2][0], verts[p2][1], verts[p2][2]),
-          Vector(norms[p0][0], norms[p0][1], norms[p0][2]),
-          Vector(norms[p1][0], norms[p1][1], norms[p1][2]),
-          Vector(norms[p2][0], norms[p2][1], norms[p2][2]));
+        const auto n0 = Vector {norms[p0][0], norms[p0][1], norms[p0][2]};
+        const auto n1 = Vector {norms[p1][0], norms[p1][1], norms[p1][2]};
+        const auto n2 = Vector {norms[p2][0], norms[p2][1], norms[p2][2]};
+        const auto v0 = make_vertex (point0, n0);
+        const auto v1 = make_vertex (point1, n1);
+        const auto v2 = make_vertex (point2, n2);
+        p = make_triangle (v0, v1, v2);
     }
     else if (textured) {
-      p = new Triangle(
-          Point(verts[p0][0], verts[p0][1], verts[p0][2], UVs[p0][0], UVs[p0][1]),
-          Point(verts[p1][0], verts[p1][1], verts[p1][2], UVs[p1][0], UVs[p1][1]),
-          Point(verts[p2][0], verts[p2][1], verts[p2][2], UVs[p2][0], UVs[p2][1]));
+        const auto v0 = make_vertex (point0, uvs[p0][0], uvs[p0][1]);
+        const auto v1 = make_vertex (point1, uvs[p1][0], uvs[p1][1]);
+        const auto v2 = make_vertex (point2, uvs[p2][0], uvs[p2][1]);
+        p = make_triangle (v0, v1, v2);
     }
     else {
-      p = new Triangle(
-          Point(verts[p0][0], verts[p0][1], verts[p0][2]),
-          Point(verts[p1][0], verts[p1][1], verts[p1][2]),
-          Point(verts[p2][0], verts[p2][1], verts[p2][2]));
+        const auto v0 = make_vertex (point0);
+        const auto v1 = make_vertex (point1);
+        const auto v2 = make_vertex (point2);
+        p = make_triangle (v0, v1, v2);
     }
 
     p->setMaterial(current_material);
@@ -399,7 +403,7 @@ void do_poly(Scene& scene, FILE* fp) {
   if (ispatch)
     free(norms);
   if (textured)
-    free(UVs);
+    free(uvs);
 
   return;
 fmterr:

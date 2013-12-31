@@ -29,7 +29,6 @@ set(INCLUDEFILES
   "${RAY_INCLUDE_DIR}/geometry.h"
   "${RAY_INCLUDE_DIR}/hashgrid.h"
   "${RAY_INCLUDE_DIR}/intersection.h"
-  "${RAY_INCLUDE_DIR}/itriangle.h"
   "${RAY_INCLUDE_DIR}/kdtree_primitive_manager.h"
   "${RAY_INCLUDE_DIR}/light.h"
   "${RAY_INCLUDE_DIR}/material.h"

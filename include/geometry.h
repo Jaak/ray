@@ -150,46 +150,33 @@ inline floating getAngleN (const Vector& v1, const Vector v2) {
 class Point : public Vector {
 public: /* Methods: */
 
-  Point() {}
+    Point() {}
 
-  Point(floating x, floating y, floating z, floating w = 1.0)
-      : Vector{ x, y, z, w } {}
+    Point(floating x, floating y, floating z, floating w = 1.0)
+        : Vector{ x, y, z, w } {}
 
-  Point(floating x, floating y, floating z, floating tu, floating tv, floating w = 1.0)
-      : Vector{ x, y, z, w }
-      , uv {tu, tv}
-      {}
+    // Assume that the vector v is normalized
+    Point nudgePoint(const Vector& v) const;
 
-  // Assume that the vector v is normalized
-  Point nudgePoint(const Vector& v) const;
+    floating dist(const Point& p) const { return (*this - p).length(); }
 
-  floating dist(const Point& p) const { return (*this - p).length(); }
-
-  floating sqDist(const Point& p) const { return (*this - p).sqrlength(); }
+    floating sqDist(const Point& p) const { return (*this - p).sqrlength(); }
 
     friend Point operator+(const Point& p, const Vector& v) {
-      return { p.x + v.x, p.y + v.y, p.z + v.z };
+        return { p.x + v.x, p.y + v.y, p.z + v.z };
     }
 
     friend Point operator-(const Point& p, const Vector& v) {
-      return { p.x - v.x, p.y - v.y, p.z - v.z };
+        return { p.x - v.x, p.y - v.y, p.z - v.z };
     }
 
     friend Vector operator-(const Point& p, const Point& q) {
-      return { p.x - q.x, p.y - q.y, p.z - q.z };
+        return { p.x - q.x, p.y - q.y, p.z - q.z };
     }
 
     friend Point operator+(const Vector& v, const Point& p) { return p + v; }
 
-     friend std::ostream& operator<<(std::ostream& os, const Point& p);
-
-public: /* Fields: */
-  // TODO: the following is the ugliest workaround ever, fix this:
-  // u,v coordinates for texture
-  union {
-    floating uv[2];
-    struct { floating u, v; };
-  }; 
+    friend std::ostream& operator<<(std::ostream& os, const Point& p);
 };
 
 inline Point Point::nudgePoint(const Vector& v) const {

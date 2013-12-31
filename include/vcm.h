@@ -97,7 +97,7 @@ private: /* Types: */
             , dVCM {(float) v.dVCM}
             , dVM {(float) v.dVM}
             , continuationPr {(float) v.brdf.continuationPr ()}
-            , length {v.length}
+            , length {(uint8_t) v.length}
         {
             const auto dir = v.brdf.worldDirFix ();
             theta = (float) acos (dir.z);
