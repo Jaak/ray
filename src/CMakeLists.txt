@@ -1,7 +1,7 @@
 set(SOURCEFILES
     camera.cpp
     framebuffer.cpp
-    intersection.cpp
+    geometry.cpp
     kdtree_primitive_manager.cpp
     main.cpp
     naive_primitive_manager.cpp
@@ -20,9 +20,11 @@ set(RAY_INCLUDE_DIR "${CMAKE_SOURCE_DIR}/include/")
 set(INCLUDEFILES
   "${RAY_INCLUDE_DIR}/aabb.h"
   "${RAY_INCLUDE_DIR}/area_light.h"
+  "${RAY_INCLUDE_DIR}/background_light.h"
   "${RAY_INCLUDE_DIR}/brdf.h"
   "${RAY_INCLUDE_DIR}/camera.h"
   "${RAY_INCLUDE_DIR}/common.h"
+  "${RAY_INCLUDE_DIR}/directional_light.h"
   "${RAY_INCLUDE_DIR}/frame.h"
   "${RAY_INCLUDE_DIR}/geometry.h"
   "${RAY_INCLUDE_DIR}/hashgrid.h"
