@@ -16,15 +16,17 @@ class Ray;
 class NaivePrimitiveManager : public PrimitiveManager {
 public: /* Methods: */
 
-	~NaivePrimitiveManager();
+    ~NaivePrimitiveManager();
 
-	void init() { }
-	
-    void addPrimitive(const Primitive* p) {
-		m_prims.push_back(p);
-	}
+    void init() override { }
 
-	Intersection intersectWithPrims(const Ray& ray) const;
+    void addPrimitive(const Primitive* p) override {
+        m_prims.push_back(p);
+    }
+
+    void setSceneSphere (SceneSphere& sceneSphere) const override;
+
+    Intersection intersectWithPrims(const Ray& ray) const override;
 
 private: /* Fields: */
     std::vector<const Primitive* > m_prims;

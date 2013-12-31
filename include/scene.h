@@ -15,6 +15,7 @@
 #include <string>
 #include <vector>
 
+class BackgroundLight;
 class Block;
 class Light;
 class Pixel;
@@ -22,6 +23,8 @@ class Primitive;
 class PrimitiveManager;
 class Renderer;
 class SceneReader;
+
+// TODO: replace background material with background light.
 
 /// Representation of scene.
 class Scene {
@@ -78,6 +81,9 @@ public: /* Methods: */
   const Textures& textures () const { return m_textures; }
   Textures& textures () { return m_textures; }
 
+  void setBackgroundLight (Light* light);
+  Light* backgroundLight () const;
+
   const SceneSphere& sceneSphere () const { return m_sceneSphere; }
   void setSceneSphere (Point center, floating radius) {
       m_sceneSphere.setCenter (center);
@@ -96,6 +102,7 @@ protected: /* Fields: */
   std::unique_ptr<PrimitiveManager>     m_manager;
   std::unique_ptr<SceneReader>          m_scene_reader;
   std::vector<std::unique_ptr<Light>>   m_lights;
+  Light*                                m_backgroundLight; // already managed by lights
   material_index_t                      m_background;
   std::vector<std::unique_ptr<Surface>> m_surfaces;
   Textures                              m_textures;

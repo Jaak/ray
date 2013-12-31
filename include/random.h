@@ -52,6 +52,25 @@ inline Sample<T> make_sample (T value, floating pdfW) {
 }
 
 /**
+ * Point on circle.
+ */
+
+inline floating concentricDiscPdfA () {
+    return RAY_INV_PI;
+}
+
+inline Sample<Vector2> sampleConcentricDisc () {
+    floating x, y;
+    do {
+        x = 2.0 * rng () - 1.0;
+        y = 2.0 * rng () - 1.0;
+    } while (x*x + y*y > 1.0);
+
+    return make_sample (Vector2 {x, y}, concentricDiscPdfA ());
+}
+
+
+/**
  * Uniformly distributed unit vector.
  */
 

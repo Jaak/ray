@@ -5,6 +5,7 @@
 #include "intersection.h"
 #include "primitive.h"
 #include "ray.h"
+#include "scene_sphere.h"
 
 #include <algorithm>
 #include <cassert>
@@ -17,17 +18,17 @@ typedef const Primitive* PrimPtr;
  */
 struct Node {
   floating   m_split;     ///< Splitting distance.
-  Axes       m_axis;      ///< Splitting axis, is None is the node is leaf.
+  uint8_t    m_axis;      ///< Splitting axis, is None is the node is leaf.
   Node*      m_left;      ///< Pointer to left subtree
   Node*      m_right;     ///< Pointer to right subtree
   PrimPtr    m_prims[1];  ///< List of primitives in the node
 
   Node ()
-    : m_split { 0.0 }
-    , m_axis { Axes::None }
-    , m_left { nullptr }
-    , m_right { nullptr }
-    , m_prims { nullptr }
+    : m_split {0.0}
+    , m_axis {3}
+    , m_left {nullptr}
+    , m_right {nullptr}
+    , m_prims {nullptr}
   { }
 
   bool empty() const { return m_prims[0] == nullptr; }
@@ -131,7 +132,7 @@ bool intersectAabb(const Aabb& box, const Ray& ray, floating& a, floating& b) {
   a = std::numeric_limits<floating>::min();
   b = std::numeric_limits<floating>::max();
 
-  for (Axes i = Axes::X; i != Axes::None; ++i) {
+  for (uint8_t i = 0; i < 3; ++i) {
     if (almost_zero (dir[i])) {
       if (origin[i] < box.m_p1[i] || origin[i] > box.m_p2[i]) {
         return false;
@@ -157,19 +158,6 @@ bool intersectAabb(const Aabb& box, const Ray& ray, floating& a, floating& b) {
   return true;
 }
 
-floating Aabb::split(Aabb& left, Aabb& right, Axes axis) const {
-  left = right = *this;
-  left.m_p2[axis] = (left.m_p1[axis] + left.m_p2[axis]) * 0.5;
-  right.m_p1[axis] = left.m_p2[axis];
-  return right.m_p1[axis];
-}
-
-void Aabb::split_at(Aabb& left, Aabb& right, Axes axis, floating pos) const {
-  left = right = *this;
-  left.m_p2[axis] = pos;
-  right.m_p1[axis] = pos;
-}
-
 enum Side {
   LEFT = 0,
   RIGHT
@@ -191,7 +179,7 @@ struct SplitCmp {
  * Tries to minimise function Area(left)*Objects(left) +
  * Area(right)*Objects(right).
  */
-floating getOptimalSplitPosition(const PrimList& plist, Aabb const& box, Axes& axis) {
+floating getOptimalSplitPosition(const PrimList& plist, Aabb const& box, uint8_t& axis) {
   const size_t len = plist.size ();
   std::vector<Split> splts(len * 2);
   Aabb left, right;
@@ -199,10 +187,10 @@ floating getOptimalSplitPosition(const PrimList& plist, Aabb const& box, Axes& a
 
   floating bestCost = std::numeric_limits<floating>::max();
   floating bestPos = -1.0;
-  axis = Axes::X;
+  axis = 0;
   const auto C = 1.0 / box.area ();
 
-  for (Axes i = Axes::X; i != Axes::None; ++i) {
+  for (uint8_t i = 0; i < 3; ++i) {
     j = 0;
     for (auto prim : plist) {
       splts[j].pos = prim->getLeftExtreme(i);
@@ -251,7 +239,7 @@ Node *buildKDTree(const PrimList &prims, const Aabb &box, int depth = 0) {
     return Node::make(prims);
 
   Aabb leftBox, rightBox;
-  Axes axis = Axes::None;
+  uint8_t axis = 3;
   const floating split = getOptimalSplitPosition(prims, box, axis);
   box.split_at(leftBox, rightBox, axis, split);
 
@@ -281,13 +269,13 @@ void KdTreePrimitiveManager::init() {
   if (m_prims.empty())
     return;
 
-  for (Axes i = Axes::X; i != Axes::None; ++i) {
+  for (uint8_t i = 0; i < 3; ++i) {
     m_bbox.m_p1[i] = m_prims.front()->getLeftExtreme(i);
     m_bbox.m_p2[i] = m_prims.front()->getRightExtreme(i);
   }
 
   for (auto prim : m_prims) {
-    for (Axes i = Axes::X; i != Axes::None; ++i) {
+    for (uint8_t i = 0; i < 3; ++i) {
       const floating l = prim->getLeftExtreme(i);
       const floating r = prim->getRightExtreme(i);
       m_bbox.m_p1[i] = fmin(m_bbox.m_p1[i], l);
@@ -304,6 +292,13 @@ void KdTreePrimitiveManager::init() {
 void KdTreePrimitiveManager::addPrimitive(const Primitive *p) {
   assert(p != nullptr);
   m_prims.push_back(p);
+}
+
+void KdTreePrimitiveManager::setSceneSphere (SceneSphere& sceneSphere) const {
+    const auto vecToMax = m_bbox.m_p2 - m_bbox.m_p1;
+    const auto middlePoint = m_bbox.m_p1 + 0.5*vecToMax;
+    sceneSphere.setCenter (middlePoint);
+    sceneSphere.setRadius (0.5 * vecToMax.length ());
 }
 
 /**
@@ -333,9 +328,9 @@ Intersection KdTreePrimitiveManager::intersectWithPrims(const Ray& ray) const {
   stack[ex].node = nullptr;
 
   while (cur != nullptr) {
-    while (cur->m_axis != Axes::None) {
+    while (cur->m_axis < 3) {
       const float split = cur->m_split;
-      Axes axis = cur->m_axis;
+      uint8_t axis = cur->m_axis;
 
       if (stack[en].pb[axis] < split) {
         if (stack[ex].pb[axis] < split) {
@@ -366,10 +361,10 @@ Intersection KdTreePrimitiveManager::intersectWithPrims(const Ray& ray) const {
       stack[ex].node = far;
       stack[ex].pb[axis] = split;
 
-      axis = nextAxis(axis);
+      axis = (axis + 1) % 3;
       stack[ex].pb[axis] = ray.origin(axis) + t * ray.dir(axis);
 
-      axis = nextAxis(axis);
+      axis = (axis + 1) % 3;
       stack[ex].pb[axis] = ray.origin(axis) + t * ray.dir(axis);
     }
 

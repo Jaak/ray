@@ -43,10 +43,10 @@ public: /* Methods: */
   virtual Vector normal(const Point&) const = 0;
 
   /// Least coordinate of the primitive on @a axis
-  virtual floating getLeftExtreme(Axes axis) const = 0;
+  virtual floating getLeftExtreme(size_t axis) const = 0;
 
   /// Greates coordinate of the primitive on @a axis
-  virtual floating getRightExtreme(Axes axis) const = 0;
+  virtual floating getRightExtreme(size_t axis) const = 0;
 
 private: /* Fields: */
   material_index_t m_material; ///< Material description of the primitive

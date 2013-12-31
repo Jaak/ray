@@ -1,6 +1,7 @@
 #include "tga_surface.h"
 
 #include <memory>
+#include <iostream>
 
 namespace {
 

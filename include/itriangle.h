@@ -1,8 +1,6 @@
 #ifndef RAY_ITRIANGLE_H
 #define RAY_ITRIANGLE_H
 
-#include <iostream>
-
 #include "primitive.h"
 #include "geometry.h"
 
@@ -48,10 +46,10 @@ public: /* Methods: */
 
     int u, v;
 
-    if (fabs(N[Axes::X]) > fabs(N[Axes::Y])) {
-      k = (fabs(N[Axes::X]) > fabs(N[Axes::Z]) ? 0 : 2);
+    if (fabs(N[0]) > fabs(N[1])) {
+      k = (fabs(N[0]) > fabs(N[2]) ? 0 : 2);
     } else {
-      k = (fabs(N[Axes::Y]) > fabs(N[Axes::Z]) ? 1 : 2);
+      k = (fabs(N[1]) > fabs(N[2]) ? 1 : 2);
     }
 
     u = (k + 1) % 3;
@@ -101,12 +99,12 @@ public: /* Methods: */
     intr.update (ray, this, t);
   }
 
-  floating getLeftExtreme(Axes axis) const {
+  floating getLeftExtreme(size_t axis) const {
     return fmin(fmin(m_verts[0].m_pos[axis], m_verts[1].m_pos[axis]),
                 m_verts[2].m_pos[axis]);
   }
 
-  floating getRightExtreme(Axes axis) const {
+  floating getRightExtreme(size_t axis) const {
     return fmax(fmax(m_verts[0].m_pos[axis], m_verts[1].m_pos[axis]),
                 m_verts[2].m_pos[axis]);
   }

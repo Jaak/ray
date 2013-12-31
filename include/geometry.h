@@ -1,32 +1,10 @@
 #ifndef RAY_GEOMETRY_H
 #define RAY_GEOMETRY_H
 
-#include <iostream>
 #include "common.h"
 
-enum class Axes : uint8_t {
-  X = 0, Y, Z, None
-};
-
-inline Axes nextAxis(Axes ax, unsigned d = 1) {
-  return static_cast<Axes>((static_cast<unsigned>(ax) + d) % 3);
-}
-
-inline Axes& operator++(Axes& axis) {
-  axis = (Axes)((int)(axis) + 1);
-  return axis;
-}
-
-inline std::ostream& operator<<(std::ostream& os, Axes ax) {
-  switch (ax) {
-    case Axes::X: os << "X"; break;
-    case Axes::Y: os << "Y"; break;
-    case Axes::Z: os << "Z"; break;
-    case Axes::None: os << "None"; break;
-  }
-
-  return os;
-}
+#include <cstdint>
+#include <iosfwd>
 
 /*************
  * 2d vector *
@@ -38,13 +16,11 @@ public: /* Methods: */
     Vector2 () { }
 
     Vector2 (floating x, floating y)
-        : x(x), y(y)
+        : x {x}, y {y}
     { }
 
     floating& operator[](size_t i) { return data[i]; }
     floating operator[](size_t i) const { return data[i]; }
-    floating& operator[](Axes i) { return data[static_cast<unsigned>(i)]; }
-    floating operator[](Axes i) const { return data[static_cast<unsigned>(i)]; }
 
 public: /* Fields: */
   union {
@@ -68,8 +44,6 @@ public: /* Methods: */
 
   floating& operator[](size_t i) { return data[i]; }
   floating operator[](size_t i) const { return data[i]; }
-  floating& operator[](Axes i) { return data[static_cast<unsigned>(i)]; }
-  floating operator[](Axes i) const { return data[static_cast<unsigned>(i)]; }
 
   Vector& operator+=(const Vector& v) {
     x += v.x; y += v.y; z += v.z; w += v.w;
@@ -109,10 +83,7 @@ public: /* Methods: */
     return { -x, -y, -z, -w };
   }
 
-  friend std::ostream& operator<<(std::ostream& os, const Vector& v) {
-    os << "Vector {" << v.x << "," << v.y << "," << v.z << "," << v.w << "}";
-    return os;
-  }
+  friend std::ostream& operator<<(std::ostream& os, const Vector& v);
 
 public: /* Fields: */
 
@@ -210,12 +181,10 @@ public: /* Methods: */
 
     friend Point operator+(const Vector& v, const Point& p) { return p + v; }
 
-  friend std::ostream& operator<<(std::ostream& os, const Point& p) {
-    os << "Point {" << p.x << "," << p.y << "," << p.z << "," << p.w << "}";
-    return os;
-  }
+     friend std::ostream& operator<<(std::ostream& os, const Point& p);
 
 public: /* Fields: */
+  // TODO: the following is the ugliest workaround ever, fix this:
   // u,v coordinates for texture
   union {
     floating uv[2];
@@ -237,7 +206,8 @@ public: /* Methods: */
     Matrix () { }
 
     explicit Matrix (floating v) {
-        std::fill (&m_data[0], &m_data[0] + 16, v);
+        for (size_t i = 0; i < 16; ++ i)
+            m_data[i] = v;
     }
 
     Matrix (floating m00, floating m01, floating m02, floating m03,
@@ -424,10 +394,7 @@ public: /* Methods: */
     return *this;
   }
 
-  friend std::ostream& operator<<(std::ostream& os, const Colour& p) {
-    os << "Colour {" << p.r << "," << p.g << "," << p.b << "}";
-    return os;
-  }
+  friend std::ostream& operator<<(std::ostream& os, const Colour& c);
 };
 
 inline Colour operator*(const Colour& c1, const Colour& c2) {

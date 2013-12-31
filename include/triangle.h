@@ -1,11 +1,9 @@
 #ifndef RAY_TRIANGLE_H
 #define RAY_TRIANGLE_H
 
-#include <iostream>
-
-#include "primitive.h"
-#include "intersection.h"
 #include "geometry.h"
+#include "intersection.h"
+#include "primitive.h"
 #include "ray.h"
 
 /**
@@ -46,11 +44,11 @@ public: /* Methods: */
     intr.update (ray, this, edge2.dot (qvec) * invDet);
   }
 
-  floating getLeftExtreme(Axes axis) const {
+  floating getLeftExtreme(size_t axis) const {
     return fmin(fmin(m_point[0][axis], m_point[1][axis]), m_point[2][axis]);
   }
 
-  floating getRightExtreme(Axes axis) const {
+  floating getRightExtreme(size_t axis) const {
     return fmax(fmax(m_point[0][axis], m_point[1][axis]), m_point[2][axis]);
   }
 
@@ -79,14 +77,6 @@ public: /* Methods: */
     tv = bu * m_point[0].v + bv * m_point[1].v + bw * m_point[2].v;
 
     return texture->getTexel(tu, tv);
-  }
-
-  void output(std::ostream& o) const {
-    o << "Triangle {";
-    o << m_point[0] << ',';
-    o << m_point[1] << ',';
-    o << m_point[2] << ',';
-    o << '}';
   }
 
 private: /* Methods: */

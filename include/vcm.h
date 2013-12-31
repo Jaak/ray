@@ -23,7 +23,7 @@
 class VCMRenderer : public Renderer {
 private: /* Types: */
 
-    static constexpr floating INITIAL_RADIUS = 0.5;
+    static constexpr floating RADIUS_FACTOR = 0.001;
     static constexpr floating RADIUS_ALPHA = 0.75;
     static constexpr size_t MIN_PATH_LENGTH = 0;
     static constexpr size_t MAX_PATH_LENGTH = 10;
@@ -66,10 +66,16 @@ private: /* Types: */
         }
     };
 
-    // possibly drop in quality for stored vertices.
-    // This is to reduce the storage requirements.
+    // TODO: we can compress this down even more:
     // - direction can be stored as 2 16 bit integers
     // - no need to store length
+    // - continuation probability can be compressed down to 16 bits too
+    // - colour can be compressed down to 32 bits via RGBE
+    // - no real need to store length (apart for debugging)
+    // In total we can compress the current sturcture down to:
+    // - 3 * 32 + 32 + 2 * 16 + 32 + 32 + 16 = 240 bits (30 bytes)
+    // VS the current
+    // - 3 * 32 + 3 * 32 + 32 + 32 + 32 + 32 + 32 + 8 = 360 bits (45 bytes)
     struct StoredVertex {
         float    x, y, z; // hitpoint;
         float    r, g, b; // throughput
@@ -134,7 +140,7 @@ private: /* Methods: */
 public: /* Methods: */
 
     explicit VCMRenderer(const Scene& s)
-      : Renderer { s }
+      : Renderer {s}
       , m_misVmWeightFactor {0.0}
       , m_misVcWeightFactor {0.0}
       , m_lightSubpathCount {1.0}
@@ -149,7 +155,7 @@ public: /* Methods: */
         m_lightSubpathCount = buf.width () * buf.height ();
 
         // Compute merging radius:
-        floating radius = INITIAL_RADIUS;
+        auto radius = RADIUS_FACTOR * scene ().sceneSphere ().radius ();
         radius /= std::pow ((floating)(iter + 1), 0.5 * (1.0 - RADIUS_ALPHA));
         radius  = std::max (radius, 4 * epsilon);
 
@@ -158,7 +164,7 @@ public: /* Methods: */
         const floating etaVCM = (M_PI * sqrRadius) * m_lightSubpathCount;
         m_misVmWeightFactor = mis (etaVCM);
         m_misVcWeightFactor = mis (1.0 / etaVCM);
-        m_vmNormalization = 1.0 / etaVCM; // huh? not really sure about this
+        m_vmNormalization = 1.0 / etaVCM;
 
         // Clear current vertices:
         m_currentVertices.clear ();
@@ -167,7 +173,7 @@ public: /* Methods: */
         if (m_previousVertices.empty ()) {
             for (size_t x = 0; x < buf.width (); ++ x) {
                 for (size_t y = 0; y < buf.height (); ++ y) {
-                    generateLightPath (buf);
+                    generateLightPath<false>(buf);
                     for (const auto& lightVertex : m_lightPath)
                         m_previousVertices.emplace_back (lightVertex);
                 }
@@ -183,7 +189,7 @@ public: /* Methods: */
         for (size_t x = 0; x < buf.width (); ++ x) {
             for (size_t y = 0; y < buf.height (); ++ y) {
                 // Generate and store a single light path:
-                generateLightPath (buf);
+                generateLightPath<true>(buf);
                 for (const auto& lightVertex : m_lightPath)
                     m_currentVertices.emplace_back (lightVertex);
 
@@ -199,7 +205,9 @@ public: /* Methods: */
         std::swap (m_currentVertices, m_previousVertices);
     }
 
-    // Generate and store a single light path.
+    // Generate and store a single light path.  If static variable
+    // ConnectToCamera is set then we also raster the vertices to camera plane.
+    template <bool ConnectToCamera>
     void generateLightPath (Framebuffer& buf) {
         m_lightPath.clear ();
         PathState lightState = generateLightSample ();
@@ -212,7 +220,7 @@ public: /* Methods: */
             const auto prim = intr.getPrimitive ();
             const Material& m = m_scene.materials ()[prim->material()];
             const auto hitpoint = intr.point ();
-            const auto lightBrdf = BRDF { ray, prim->normal (hitpoint), m };
+            const auto lightBrdf = BRDF {ray, prim->normal (hitpoint), m};
 
             if (! lightBrdf.isValid ())
                 break;
@@ -232,7 +240,7 @@ public: /* Methods: */
             }
 
             // Don't connect specular vertices to camera
-            if (! lightBrdf.isDelta ()) {
+            if (ConnectToCamera && ! lightBrdf.isDelta ()) {
                 if (lightState.length + 1 >= MIN_PATH_LENGTH) {
                     connectToCamera (buf, lightState, hitpoint, lightBrdf);
                 }
@@ -257,7 +265,14 @@ public: /* Methods: */
             const auto ray = shootRay (cameraState.hitpoint, cameraState.direction);
             const auto intr = intersectWithPrims (ray);
             if (! intr.hasIntersections ()) {
-                /// TODO: consider background light
+                if (scene ().backgroundLight () &&
+                    cameraState.length >= MIN_PATH_LENGTH)
+                {
+                    const auto pos = Point {0, 0, 0};
+                    colour += cameraState.throughput * getLightRadiance (
+                        scene ().backgroundLight (), cameraState, pos, ray.dir ());
+                }
+
                 break;
             }
 

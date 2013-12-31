@@ -1,14 +1,12 @@
 #ifndef RAY_PRIMITIVE_MANAGER_H
 #define RAY_PRIMITIVE_MANAGER_H
 
+class Camera;
+class Framebuffer;
 class Intersection;
 class Primitive;
 class Ray;
-
-#include <ostream>
-
-class Camera;
-class Framebuffer;
+class SceneSphere;
 
 /**
  * Base class for all primitive-managers.
@@ -29,6 +27,8 @@ public: /* Methods: */
   /// Add a primitive to primitive manager.
   virtual void addPrimitive(const Primitive* prim) = 0;
 
+  virtual void setSceneSphere (SceneSphere& sceneSphere) const = 0;
+
   /**
    * Initialises the primitive manager.
    * After this call no primitives should be added to the
@@ -40,10 +40,6 @@ public: /* Methods: */
 
   /// Intersects @a ray with primitives.
   virtual Intersection intersectWithPrims(const Ray& ray) const = 0;
-
-  friend std::ostream& operator<<(std::ostream& o, const PrimitiveManager&) {
-    return o;
-  }
 };
 
 #endif

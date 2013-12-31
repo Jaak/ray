@@ -1,7 +1,8 @@
-#include <gd.h>
-#include <cstdio>
-
 #include "png_surface.h"
+
+#include <cstdio>
+#include <gd.h>
+#include <iostream>
 
 void PngSurface::init() {
   data = new int* [m_height];

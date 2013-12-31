@@ -13,7 +13,9 @@
 #include <boost/thread/mutex.hpp>
 #include <string>
 
-Scene::Scene() {
+Scene::Scene()
+    : m_backgroundLight {nullptr}
+{
     m_background = m_materials.registerMaterial (Material { Colour { 0, 0, 0 } });
 }
 
@@ -66,6 +68,8 @@ void Scene::init() {
       const auto td = time_period(start_time, microsec_clock::local_time()).length();
       std::cout << "Building acceleration structure took " << td << std::endl << std::endl;
   }
+
+  m_manager->setSceneSphere (m_sceneSphere);
 }
 
 void Scene::addPrimitive(const Primitive* p) { m_manager->addPrimitive(p); }
@@ -79,6 +83,15 @@ void Scene::updatePixel (size_t x, size_t y, Colour c) const {
         surface->setPixel (y, x, c);
     }
 }
+
+void Scene::setBackgroundLight (Light* light) {
+    m_backgroundLight = light;
+}
+
+Light* Scene::backgroundLight () const {
+    return m_backgroundLight;
+}
+
 
 void Scene::run() {
     using namespace boost::posix_time;

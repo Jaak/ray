@@ -1,15 +1,17 @@
 #include "area_light.h"
+#include "background_light.h"
 #include "common.h"
+#include "directional_light.h"
 #include "geometry.h"
 #include "itriangle.h"
 #include "material.h"
 #include "point_light.h"
-#include "spotlight.h"
 #include "scene.h"
 #include "sphere.h"
-#include "triangle.h"
-#include "tga_reader.h"
+#include "spotlight.h"
 #include "texture.h"
+#include "tga_reader.h"
+#include "triangle.h"
 
 #include <cstdio>
 #include <cstdlib>
@@ -139,6 +141,20 @@ void do_area_light (Scene& scene, FILE* fp) {
     scene.addLight(light);
 }
 
+void do_directional_light (Scene& scene, FILE* fp) {
+    float x, y, z, r = 1.0, g = 1.0, b = 1.0;
+    const auto n = fscanf(fp, "%f %f %f %f %f %f", &x, &y, &z, &r, &g, &b);
+    if (n != 6 && n != 3) {
+        show_error ("Directional light source syntax error");
+        exit (1);
+    }
+
+    const auto intensity = Colour {r, g, b};
+    const auto dir = Vector {x, y, z};
+    Light* light = new DirectionalLight {scene.sceneSphere (), intensity, dir};
+    scene.addLight (light);
+}
+
 void do_spotlight (Scene& scene, FILE* fp) {
     float x, y, z, dx, dy, dz, a, r = 1.0, g = 1.0, b = 1.0;
     const auto n = fscanf(fp, "%f %f %f %f %f %f %f %f %f %f",
@@ -176,18 +192,29 @@ void do_light(Scene& scene, FILE* fp) {
     return;
   }
 
+  if (c == 'd') {
+    do_directional_light (scene, fp);
+    return;
+  }
+
   ungetc(c, fp);
   do_regular_light (scene, fp);
 }
 
 void do_background(Scene& scene, FILE* fp) {
-  float r, g, b;
+  float r = 0, g = 0, b = 0;
   if (fscanf(fp, "%f %f %f", &r, &g, &b) != 3) {
     show_error("background color syntax error");
     exit(1);
   }
 
-  scene.setBackground(Colour(r, g, b));
+  const auto col = Colour {r, g, b};
+  scene.setBackground (col);
+  if (r > 0 || g > 0 || b > 0) {
+      Light* light = new BackgroundLight {scene.sceneSphere (), col};
+      scene.addLight (light);
+      scene.setBackgroundLight (light);
+  }
 }
 
 void do_fill(Scene& scene, FILE* fp) {

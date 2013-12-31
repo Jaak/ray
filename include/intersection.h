@@ -2,16 +2,15 @@
 #define RAY_INTERSECTION_H
 
 #include "geometry.h"
-#include <iostream>
+#include "ray.h"
 
 class Primitive;
-class Ray;
 
 /// Representation of intersection of ray and object.
 class Intersection {
 public: /* Methods: */
 
-  Intersection() : m_primitive { nullptr } {}
+  Intersection() : m_primitive {nullptr} {}
 
   const Point& point() const { return m_point; }
 
@@ -23,9 +22,13 @@ public: /* Methods: */
 
   bool hasIntersections() const { return m_primitive != nullptr; }
 
-  void update(const Ray& ray, const Primitive* prim, floating dist);
-
-  friend std::ostream& operator<<(std::ostream&, const Intersection&);
+  void update(const Ray& ray, const Primitive* prim, floating dist) {
+      if (dist > 0.0 && (!hasIntersections() || dist < this->dist())) {
+          m_primitive = prim;
+          m_dist = dist;
+          m_point = ray.origin() + dist * ray.dir();
+      }
+}
 
 private: /* Fields: */
   const Primitive* m_primitive; ///< Intersected primitive.

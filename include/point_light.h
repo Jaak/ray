@@ -11,7 +11,7 @@ public: /* Methods: */
 
     PointLight(const SceneSphere& sceneSphere, Colour intensity, Point pos)
         : Light {sceneSphere, intensity, true, true}
-        , m_position { pos }
+        , m_position {pos}
     {}
 
     IlluminateResult illuminate (Point pos) const override {
@@ -19,16 +19,17 @@ public: /* Methods: */
         const floating distSqr = direction.sqrlength ();
         const floating distance = std::sqrt (distSqr);
         direction = direction / distance;
-        return { intensity (), direction, distance, distSqr, uniformSpherePdfW(), 1.0 };
+        return {intensity (), direction, distance, distSqr, uniformSpherePdfW(), 1.0};
     }
 
     EmitResult emit () const override {
         const auto sample = sampleUniformSphere ();
-        return { intensity (), m_position, sample.get (), sample.get(), sample.pdfW(), 1.0, 1.0 };
+        const auto direction = sample.get ();
+        return {intensity (), m_position, direction, direction, sample.pdfW(), 1.0, 1.0};
     }
 
     RadianceResult radiance (Point, Vector) const override {
-        return {{0, 0, 0}, 1.0 / (M_PI * 4.0), 1.0};
+        return {{0, 0, 0}, uniformSpherePdfW (), 1.0};
     }
 
 private: /* Fields: */

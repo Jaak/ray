@@ -2,25 +2,26 @@
 #define RAY_KDTREE_PRIMITIVE_MANAGER_H
 
 #include "primitive_manager.h"
-#include "geometry.h"
 #include "aabb.h"
 
 #include <vector>
 
-typedef std::vector<const Primitive*> PrimList;
+using PrimList = std::vector<const Primitive*>;
 
 struct Node;
 class Ray;
+class SceneSphere;
 
 class KdTreePrimitiveManager : public PrimitiveManager {
 public: /* Methods: */
   KdTreePrimitiveManager();
   ~KdTreePrimitiveManager();
 
-  void init();
-  void addPrimitive(const Primitive* p);
-  Intersection intersectWithPrims(const Ray& ray) const;
-  void debugDrawOnFramebuffer (const Camera& cam, Framebuffer& buf) const;
+  void init() override;
+  void addPrimitive(const Primitive* p) override;
+  void setSceneSphere (SceneSphere& sceneSphere) const override;
+  Intersection intersectWithPrims(const Ray& ray) const override;
+  void debugDrawOnFramebuffer (const Camera& cam, Framebuffer& buf) const override;
 
 private:            /* Fields: */
   PrimList m_prims; ///< List of all the primitives.

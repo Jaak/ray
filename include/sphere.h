@@ -8,8 +8,6 @@
 #include "ray.h"
 #include "light.h"
 
-#include <iostream>
-
 /**
  * @ingroup Primitives
  * A sphere.
@@ -45,11 +43,11 @@ public: /* Methods: */
     intr.update (ray, this, -p - d);
   }
 
-  floating getLeftExtreme(Axes axis) const {
+  floating getLeftExtreme(size_t axis) const {
     return m_center[axis] - m_radius;
   }
 
-  floating getRightExtreme(Axes axis) const {
+  floating getRightExtreme(size_t axis) const {
     return m_center[axis] + m_radius;
   }
 
@@ -58,13 +56,6 @@ public: /* Methods: */
     const auto u = 0.5 + atan2(D.z, D.x) / (2 * M_PI);
     const auto v = 0.5 - asin(D.y) / M_PI;
     return texture->getTexel(u, v);
-  }
-
-  void output(std::ostream& o) const {
-    o << "Sphere {";
-    o << "center = " << m_center << ',';
-    o << "radius = " << m_radius;
-    o << '}';
   }
 
 protected: /* Fields: */
