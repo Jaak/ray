@@ -44,7 +44,7 @@ public: /* Methods: */
 
   const Vector& normal () const { return m_z; }
   const Vector& tangent () const { return m_y; }
-  const Vector& binormal () const { return m_z; }
+  const Vector& binormal () const { return m_x; }
 
   // as the constructor normalises we can avoid redundant
   // normalisations using this
