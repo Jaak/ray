@@ -63,4 +63,4 @@ the image took around 6 hours to render on a 4 core i7 clocked at 3.4GHz.
 
 ![Cornell box](https://raw.github.com/Jaak/ray/master/imgs/cornell.png)
 
-![Cornell box with spheres](https://raw.github.com/Jaak/ray/master/imgs/cornell-spheres.png)
+![Cornell box with spheres](https://raw.github.com/Jaak/ray/master/imgs/directional.png)
