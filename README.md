@@ -9,18 +9,17 @@ This is our projects repository for computer graphics course.
 The following packages are required:
 * gcc 4.7 or clang 3.1
 * CMake 2.6
-* SDL
 * Boost (thread, date\_time, program\_options)
 * libgd (optional for generating PNG images)
 
 On debian based system the packages could be installed as follows:
 <pre>
-$ sudo apt-get install gcc cmake libsdl1.2-dev libboost-dev libgd-dev
+$ sudo apt-get install gcc cmake libboost-dev libgd-dev
 </pre>
 
 On gentoo make sure that png USE flag is enabled and as root:
 <pre>
-$ emerge -a1 cmake libsdl gd boost
+$ emerge -a1 cmake gd boost
 </pre>
 
 ### Build instructions
