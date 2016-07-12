@@ -276,6 +276,9 @@ private: /* Methods: */
 
               break;
           }
+          case LIGHT:
+              // TODO?
+              break;
           }
 
           ++ depth;
@@ -295,7 +298,7 @@ private: /* Methods: */
       vertices.reserve (RAY_MAX_REC_DEPTH);
       eyePA = 1.0;
       trace (R, vertices);
-      return std::move (vertices);
+      return vertices;
   }
 
   Light* pickLight () {
@@ -327,7 +330,7 @@ private: /* Methods: */
         clamp (1.0 / (2.0 * M_PI * emission.cosTheta), 0.0, 1.0),
         LIGHT);
       trace (shootRay(emission.position, emission.direction), vertices);
-      return std::move (vertices);
+      return vertices;
   }
 
   const Material& getMat (const Primitive* prim) const {
@@ -480,7 +483,7 @@ private: /* Methods: */
       for (size_t i = 3; i <= NL; ++ i) {
           alpha_L[i] = (lightVertices[i - 2].m_col / lightVertices[i - 2].m_pr) * alpha_L[i - 1];
       }
-      return std::move (alpha_L);
+      return alpha_L;
   }
 
   // Equation 10.7
@@ -496,7 +499,7 @@ private: /* Methods: */
       for (size_t i = 2; i <= NE; ++ i)
           alpha_E[i] = (eyeVertices[i - 2].m_col / eyeVertices[i - 2].m_pr) * alpha_E[i - 1];
 
-      return std::move (alpha_E);
+      return alpha_E;
   }
 };
 

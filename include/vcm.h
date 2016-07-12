@@ -25,8 +25,8 @@ private: /* Types: */
 
     static constexpr floating RADIUS_FACTOR = 0.001;
     static constexpr floating RADIUS_ALPHA = 0.75;
-    static constexpr size_t MIN_PATH_LENGTH = 0;
-    static constexpr size_t MAX_PATH_LENGTH = 10;
+    static const size_t MIN_PATH_LENGTH = 1;
+    static const size_t MAX_PATH_LENGTH = 10;
 
     struct PathState {
         Point     hitpoint;
@@ -146,7 +146,7 @@ public: /* Methods: */
       , m_lightSubpathCount {1.0}
     { }
 
-    std::unique_ptr<Renderer> clone () const {
+    std::unique_ptr<Renderer> clone () const override final {
         return std::unique_ptr<Renderer> {new VCMRenderer {m_scene}};
     }
 
@@ -173,7 +173,7 @@ public: /* Methods: */
         if (m_previousVertices.empty ()) {
             for (size_t x = 0; x < buf.width (); ++ x) {
                 for (size_t y = 0; y < buf.height (); ++ y) {
-                    generateLightPath<false>(buf);
+                    generateLightPath(buf, false);
                     for (const auto& lightVertex : m_lightPath)
                         m_previousVertices.emplace_back (lightVertex);
                 }
@@ -189,7 +189,7 @@ public: /* Methods: */
         for (size_t x = 0; x < buf.width (); ++ x) {
             for (size_t y = 0; y < buf.height (); ++ y) {
                 // Generate and store a single light path:
-                generateLightPath<true>(buf);
+                generateLightPath(buf, true);
                 for (const auto& lightVertex : m_lightPath)
                     m_currentVertices.emplace_back (lightVertex);
 
@@ -207,8 +207,7 @@ public: /* Methods: */
 
     // Generate and store a single light path.  If static variable
     // ConnectToCamera is set then we also raster the vertices to camera plane.
-    template <bool ConnectToCamera>
-    void generateLightPath (Framebuffer& buf) {
+    void generateLightPath (Framebuffer& buf, bool connect) {
         m_lightPath.clear ();
         PathState lightState = generateLightSample ();
         for (;; ++ lightState.length) {
@@ -240,7 +239,7 @@ public: /* Methods: */
             }
 
             // Don't connect specular vertices to camera
-            if (ConnectToCamera && ! lightBrdf.isDelta ()) {
+            if (connect && ! lightBrdf.isDelta ()) {
                 if (lightState.length + 1 >= MIN_PATH_LENGTH) {
                     connectToCamera (buf, lightState, hitpoint, lightBrdf);
                 }
@@ -258,6 +257,8 @@ public: /* Methods: */
     // render a single camera path
     Colour generateCameraPath (Framebuffer& buf, Ray cameraRay) {
         auto colour = Colour {0, 0, 0};
+
+        (void) buf;
 
         PathState cameraState = generateCameraSample (cameraRay);
         // std::vector<Point> path;
@@ -317,7 +318,7 @@ public: /* Methods: */
             // Connect to light vertices
             if (! cameraBrdf.isDelta ()) {
                 for (const auto& lightVertex : m_lightPath) {
-                    const auto pathLength = lightVertex.length + 1 + cameraState.length;
+                    const size_t pathLength = lightVertex.length + 1 + cameraState.length;
                     if (pathLength < MIN_PATH_LENGTH)
                         continue;
 
@@ -334,7 +335,7 @@ public: /* Methods: */
                 auto contrib = Colour {0, 0, 0};
                 const auto visitor =
                     [this, &contrib, &hitpoint, &cameraBrdf, &cameraState](const StoredVertex& lightVertex) {
-                        const auto pathLength = cameraState.length + lightVertex.length;
+                        const size_t pathLength = cameraState.length + lightVertex.length;
                         if (pathLength < MIN_PATH_LENGTH || pathLength > MAX_PATH_LENGTH)
                             return;
 
