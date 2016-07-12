@@ -38,26 +38,10 @@ $ ./src/ray --help
 ## Usage instructions
 
 The help is provided with "--help" command line argument. Use "--bpt" to enable
-bidirectional path tracing and use "-s" to set the number of samples. The
-higher the number of samples the longer the rendering will take. The default
-value is 5.
-
-For example, the first image below was rendered in the build directory with the following options:
-<pre>
-$ ./src/ray --bpt -s 1000 --png out.png --non-interactive ../nff/cornell-spheres.nff
-</pre>
-The options perform the following: specify that bidirectional path tracing is
-to be used, sets the samples to 1000, specifies png output file, disables
-interactive rendering and finally specified which scene to render.  Warning,
-the image took around 6 hours to render on a 4 core i7 clocked at 3.4GHz.
-
-## New features
-
-* Support for area and spot lights.
-* Bidirectional path tracing algorithm.
-* Blender exporter to slightly modified NFF. Does not fully support materials,
-  textures and lights, but provides a nice way to export geometry to NFF.
-* Basic texturing.
+bidirectional path tracing (quite broken) or "--vcm" for vertex connection and
+merging rendering algorithm. Use "-s" to set the number of samples. The higher
+the number of samples the longer the rendering will take. The default value is
+5.
 
 ### Example renders
 

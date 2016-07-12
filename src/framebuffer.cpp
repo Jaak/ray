@@ -2,6 +2,8 @@
 #include "camera.h"
 #include "aabb.h"
 
+#include <boost/thread/tss.hpp>
+
 namespace /* anonymous */ {
 
 constexpr size_t updateBufferSize = 1024;
@@ -16,9 +18,22 @@ struct FramebufferUpdate {
     { }
 };
 
-thread_local std::vector<FramebufferUpdate> updateBuffer;
+using FramebufferUpdateQueue = std::vector<FramebufferUpdate>;
+
+FramebufferUpdateQueue& updateQueue() {
+    static boost::thread_specific_ptr<FramebufferUpdateQueue> updateQueuePtr;
+    if (! updateQueuePtr.get())
+        updateQueuePtr.reset(new FramebufferUpdateQueue());
+
+    return *updateQueuePtr;
+}
+
 
 } // namespace anonymous
+
+Framebuffer::Framebuffer (size_t width, size_t height)
+    : table<Colour> {width, height, Colour {0, 0, 0}}
+{ }
 
 Colour Framebuffer::getPixel (size_t x, size_t y) const {
     boost::mutex::scoped_lock scoped_lock {m_mutex};
@@ -32,18 +47,18 @@ void Framebuffer::clear () {
 
 void Framebuffer::flushUpdates () {
     boost::mutex::scoped_lock scoped_lock {m_mutex};
-    for (const auto& update : updateBuffer) {
+    for (const auto& update : updateQueue()) {
         unsafeAddColour (update.x, update.y, update.col);
     }
 
-    updateBuffer.clear ();
+    updateQueue().clear ();
 }
 
 void Framebuffer::addColour (size_t x, size_t y, Colour col) {
-    if (updateBuffer.size () >= updateBufferSize)
+    if (updateQueue().size () >= updateBufferSize)
         flushUpdates ();
 
-    updateBuffer.emplace_back (x, y, col);
+    updateQueue().emplace_back (x, y, col);
 }
 
 void Framebuffer::unsafeDrawAabb (const Camera& cam, const Aabb& box, Colour col) {

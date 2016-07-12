@@ -28,10 +28,7 @@ class Camera;
 class Framebuffer : table<Colour> {
 public: /* Methods: */
 
-    Framebuffer (size_t width, size_t height)
-        : table<Colour> {width, height, Colour {0, 0, 0}}
-    { }
-
+    Framebuffer(size_t width, size_t height);
     Framebuffer (const Framebuffer&) = delete;
     Framebuffer& operator = (const Framebuffer&) = delete;
 

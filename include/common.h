@@ -81,9 +81,11 @@ constexpr floating RAY_MIN_COLOUR_TOLERANCE = 0.000001;
 #endif
 
 #ifdef __clang__
-  #define CLANG_VERSION (__clang_major__ * 10000 + __clang_minor__ * 100 + __clang_patchlevel__)
-  #if CLANG_VERSION >= 30200
-    #define HAVE_THREAD_LOCAL_STORAGE 1
+  #ifndef __APPLE__
+    #define CLANG_VERSION (__clang_major__ * 10000 + __clang_minor__ * 100 + __clang_patchlevel__)
+    #if CLANG_VERSION >= 30200
+      #define HAVE_THREAD_LOCAL_STORAGE 1
+    #endif
   #endif
 #endif
 

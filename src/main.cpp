@@ -4,7 +4,6 @@
 #include "pathtracer.h"
 #include "raytracer.h"
 #include "scene.h"
-#include "sdl_surface.h"
 #include "tga_surface.h"
 #include "vcm.h"
 
@@ -29,8 +28,7 @@ void parseCommandLine(int argc, char** argv, po::options_description& desc, po::
     ("bpt",                                 "Use bidirection path tracer")
     ("vcm",                                 "Use vertex connecting and merging")
     ("samples,s", po::value<size_t>(),      "Number of samples per pixel")
-    ("input,i",   po::value<std::string>(), "Input NFF file")
-    ("non-interactive",                     "Don't render interactively");
+    ("input,i",   po::value<std::string>(), "Input NFF file");
 
   po::positional_options_description p;
   p.add("input", -1);
@@ -107,10 +105,6 @@ int main(int argc, char** argv) {
   /*****************
    * Select output *
    *****************/
-
-  if (vm.count("non-interactive") == 0) {
-    scene.attachSurface(new SDLSurface());
-  }
 
 #ifdef HAVE_GD_SUPPORT_PNG
   if (vm.count("png")) {

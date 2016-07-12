@@ -11,7 +11,6 @@ set(SOURCEFILES
     ray.cpp
     renderer.cpp
     scene.cpp
-    sdl_surface.cpp
     tga_surface.cpp
 )
 
@@ -48,7 +47,6 @@ set(INCLUDEFILES
   "${RAY_INCLUDE_DIR}/renderer.h"
   "${RAY_INCLUDE_DIR}/scene.h"
   "${RAY_INCLUDE_DIR}/scene_reader.h"
-  "${RAY_INCLUDE_DIR}/sdl_surface.h"
   "${RAY_INCLUDE_DIR}/sphere.h"
   "${RAY_INCLUDE_DIR}/surface.h"
   "${RAY_INCLUDE_DIR}/table.h"
@@ -76,11 +74,9 @@ include_directories(ray
   "${RAY_INCLUDE_DIR}"
   ${Boost_INCLUDE_DIRS}
   ${GD_INCLUDE_DIRS}
-  ${SDL_INCLUDE_DIRS}
 )
 
 target_link_libraries(ray
   ${Boost_LIBRARIES}
-  ${SDL_LIBRARY}
   ${GD_LIBRARIES}
 )

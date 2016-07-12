@@ -3,12 +3,6 @@ cmake_minimum_required (VERSION 2.6 FATAL_ERROR)
 project ("ray" "CXX" "C")
 set(CMAKE_MODULE_PATH ${CMAKE_MODULE_PATH} "${CMAKE_SOURCE_DIR}/cmake/")
 
-# SDL
-find_package(SDL REQUIRED)
-include_directories(${SDL_INCLUDE_DIRS})
-link_directories(${SDL_LIBRARY_DIRS})
-add_definitions(${SDL_DEFINITIONS})
-
 # Boost
 find_package(Boost COMPONENTS thread date_time system program_options REQUIRED)
 include_directories(${BOOST_INCLUDE_DIRS})
