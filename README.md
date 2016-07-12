@@ -1,6 +1,9 @@
 # A simple ray tracer
 
-This is our projects repository for computer graphics course.
+This is personal project for toying around with software raytracers. Used to
+support files in the NFF format but now, because it supports path tracing, uses
+some custom NFF amalgamation. Currently the best renderer is VCM. BPT is also
+supported but the code is clearly broken.
 
 ## Installation instruction
 
