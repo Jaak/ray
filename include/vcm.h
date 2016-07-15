@@ -205,8 +205,8 @@ public: /* Methods: */
         std::swap (m_currentVertices, m_previousVertices);
     }
 
-    // Generate and store a single light path.  If static variable
-    // ConnectToCamera is set then we also raster the vertices to camera plane.
+    // Generate and store a single light path.
+    // If \a connect is set then we also raster the vertices to camera plane.
     void generateLightPath (Framebuffer& buf, bool connect) {
         m_lightPath.clear ();
         PathState lightState = generateLightSample ();
@@ -567,16 +567,15 @@ private:
     }
 
     bool sampleLightScattering (const BRDF& lightBrdf, Point hitpoint, PathState& lightState) const {
-        return sampleScattering<true>(lightBrdf, hitpoint, lightState);
+        return sampleScattering(lightBrdf, hitpoint, true, lightState);
     }
 
     bool sampleEyeScattering (const BRDF& cameraBrdf, Point hitpoint, PathState& cameraState) const {
-        return sampleScattering<false>(cameraBrdf, hitpoint, cameraState);
+        return sampleScattering(cameraBrdf, hitpoint, false, cameraState);
     }
 
-    template <bool LightTracing>
-    bool sampleScattering (const BRDF& brdf, Point hitpoint, PathState& state) const {
-        const auto sample = brdf.sample<LightTracing>();
+    bool sampleScattering (const BRDF& brdf, Point hitpoint, bool lightTracing, PathState& state) const {
+        const auto sample = brdf.sample(lightTracing);
         if (sample.event == BRDF::NONE || sample.colour.isZero ())
             return false;
 

@@ -1,6 +1,7 @@
 #ifndef RAY_BRDF_H
 #define RAY_BRDF_H
 
+#include "random.h"
 #include "material.h"
 #include "frame.h"
 #include "primitive.h"
@@ -143,11 +144,10 @@ public: /* Methods: */
         return { dirPdfW, revPdfW };
     }
 
-    SampleResult sampleLight () const { return sample<true>(); }
-    SampleResult sampleCamera () const { return sample<false>(); }
+    SampleResult sampleLight () const { return sample(true); }
+    SampleResult sampleCamera () const { return sample(false); }
 
-    template <bool LightTracing>
-    SampleResult sample () const {
+    SampleResult sample (bool lightTracing) const {
         auto col = Colour {0, 0, 0};
         auto dir = Vector {0, 0, 0};
         auto pdfW = floating {0};
@@ -166,7 +166,7 @@ public: /* Methods: */
             }
             else {
                 event = REFRACT;
-                sampleRefract<LightTracing>(col, dir, pdfW);
+                sampleRefract(lightTracing, col, dir, pdfW);
             }
         }
 
@@ -218,9 +218,9 @@ private: /* Methods: */
     }
 
     // TODO: always exiting to or entering from air
-    template <bool LightTracing>
-    void sampleRefract (Colour& result, Vector& dir, floating& pdfW) const {
+    void sampleRefract (bool lightTracing, Colour& result, Vector& dir, floating& pdfW) const {
         const bool internal = m_localDirFix.z < 0.0;
+        /// XXX assume that reflection always to/from air
         const floating n = internal ? (m_mat.ior () / 1.0) : (1.0 / m_mat.ior ());
         const floating cosI = fabs (m_localDirFix.z);
         const floating sinT2 = n * n * (1.0 - cosI * cosI);
@@ -228,14 +228,14 @@ private: /* Methods: */
             const auto cosT = (internal ? 1.0 : -1.0) * std::sqrt (1.0 - sinT2);
             dir = Vector { - n*m_localDirFix.x, -n*m_localDirFix.y, cosT };
             pdfW += m_refrPr;
-            const auto factor = LightTracing ? 1.0 : n*n;
+            const auto factor = lightTracing ? 1.0 : n*n;
             result += m_mat.colour()*m_mat.t()*(1.0 - m_fresPr)*factor / fabs (cosT); /// XXX HACK same as previous
         }
     }
 
 private: /* Fields: */
-    Frame             m_frame; ///< Local frame of reference (orthonormal basis).
-    Vector            m_localDirFix; ///< The fixed local direction vector.
+    const Frame       m_frame; ///< Local frame of reference (orthonormal basis).
+    const Vector      m_localDirFix; ///< The fixed local direction vector.
     const Material&   m_mat;
 
     floating          m_diffPr; ///< Diffuse scattering probability.
