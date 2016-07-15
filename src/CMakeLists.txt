@@ -12,6 +12,7 @@ set(SOURCEFILES
     renderer.cpp
     scene.cpp
     tga_surface.cpp
+    tga_reader.cpp
 )
 
 set(RAY_INCLUDE_DIR "${CMAKE_SOURCE_DIR}/include/")

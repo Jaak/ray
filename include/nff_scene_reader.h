@@ -1,15 +1,12 @@
-#ifndef NFF_SCENE_READER_H
-#define NFF_SCENE_READER_H
+#pragma once
 
 #include "scene_reader.h"
 
 class NFFSceneReader : public SceneReader {
 public: /* Methods: */
-  NFFSceneReader(char const* fname) : SceneReader(fname) {}
+    NFFSceneReader(char const *fname) : SceneReader(fname) {}
 
-  ~NFFSceneReader() {}
+    ~NFFSceneReader() {}
 
-  SceneReader::Status init(Scene& scene) const;
+    SceneReader::Status init(Scene &scene) const;
 };
-
-#endif

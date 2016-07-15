@@ -1,5 +1,4 @@
-#ifndef RAY_COMMON_H
-#define RAY_COMMON_H
+#pragma once
 
 #include <cmath>
 #include <limits>
@@ -87,6 +86,4 @@ constexpr floating RAY_MIN_COLOUR_TOLERANCE = 0.000001;
       #define HAVE_THREAD_LOCAL_STORAGE 1
     #endif
   #endif
-#endif
-
 #endif

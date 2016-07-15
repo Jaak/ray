@@ -428,7 +428,7 @@ void do_texture(Scene& scene, FILE* fp) {
   file_location.erase(scene.getFname().find_last_of('/') + 1, std::string::npos);
   std::string texture_file = file_location + std::string(tf);
 
-  current_texture = scene.textures().registerTexture(tga_reader::readTexture(texture_file));
+  current_texture = scene.textures().registerTexture(readTexture(texture_file));
 }
 
 void

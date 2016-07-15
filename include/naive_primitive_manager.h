@@ -1,7 +1,7 @@
-#ifndef RAY_NAIVE_PRIMITIVE_MANAGER_H
-#define RAY_NAIVE_PRIMITIVE_MANAGER_H
+#pragma once
 
 #include "primitive_manager.h"
+
 #include <vector>
 
 class Primitive;
@@ -15,21 +15,16 @@ class Ray;
  */
 class NaivePrimitiveManager : public PrimitiveManager {
 public: /* Methods: */
-
     ~NaivePrimitiveManager();
 
-    void init() override { }
+    void init() override {}
 
-    void addPrimitive(const Primitive* p) override {
-        m_prims.push_back(p);
-    }
+    void addPrimitive(const Primitive* p) override { m_prims.push_back(p); }
 
-    void setSceneSphere (SceneSphere& sceneSphere) const override;
+    void setSceneSphere(SceneSphere& sceneSphere) const override;
 
     Intersection intersectWithPrims(const Ray& ray) const override;
 
 private: /* Fields: */
-    std::vector<const Primitive* > m_prims;
+    std::vector<const Primitive*> m_prims;
 };
-
-#endif

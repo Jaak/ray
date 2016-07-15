@@ -1,5 +1,4 @@
-#ifndef AABB_H
-#define AABB_H
+#pragma once
 
 #include "geometry.h"
 
@@ -47,5 +46,3 @@ struct Aabb {
     Point m_p1; ///< Minimum point of the box
     Point m_p2; ///< Maximum point of the box.
 };
-
-#endif

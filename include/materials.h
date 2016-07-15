@@ -1,18 +1,17 @@
-#ifndef RAY_MATERIALS_H
-#define RAY_MATERIALS_H
+#pragma once
 
 #include "material.h"
+
 #include <vector>
 
 class Materials {
-    typedef std::vector<Material> impl_t;
+    using impl_t = std::vector<Material>;
 
 public: /* Methods: */
-
-    Materials ()
-        : m_materials ()
+    Materials()
+        : m_materials()
     {
-        m_materials.emplace_back (Colour {0, 0, 0}, 0.0, 0.0, 0.0, 1, 1);
+        m_materials.emplace_back(Colour{0, 0, 0}, 0.0, 0.0, 0.0, 1, 1);
     }
 
     material_index_t registerMaterial(Material mat) {
@@ -25,12 +24,10 @@ public: /* Methods: */
         return m_materials[idx];
     }
 
-    static material_index_t lightMaterial () { return 0; }
+    static material_index_t lightMaterial() { return 0; }
 
     void shrink_to_fit() { impl_t(m_materials).swap(m_materials); }
 
 private: /* Fields: */
     impl_t m_materials;
 };
-
-#endif

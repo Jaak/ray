@@ -1,5 +1,4 @@
-#ifndef RAY_PRIMITIVE_MANAGER_H
-#define RAY_PRIMITIVE_MANAGER_H
+#pragma once
 
 class Camera;
 class Framebuffer;
@@ -21,25 +20,23 @@ class SceneSphere;
  */
 class PrimitiveManager {
 public: /* Methods: */
-  PrimitiveManager() {}
-  virtual ~PrimitiveManager() {}
+    PrimitiveManager() {}
+    virtual ~PrimitiveManager() {}
 
-  /// Add a primitive to primitive manager.
-  virtual void addPrimitive(const Primitive* prim) = 0;
+    /// Add a primitive to primitive manager.
+    virtual void addPrimitive(const Primitive* prim) = 0;
 
-  virtual void setSceneSphere (SceneSphere& sceneSphere) const = 0;
+    virtual void setSceneSphere(SceneSphere& sceneSphere) const = 0;
 
-  /**
-   * Initialises the primitive manager.
-   * After this call no primitives should be added to the
-   * manager, otherwise managers behaviour is undefined.
-   */
-  virtual void init() = 0;
+    /**
+     * Initialises the primitive manager.
+     * After this call no primitives should be added to the
+     * manager, otherwise managers behaviour is undefined.
+     */
+    virtual void init() = 0;
 
-  virtual void debugDrawOnFramebuffer (const Camera&, Framebuffer&) const { }
+    virtual void debugDrawOnFramebuffer(const Camera&, Framebuffer&) const {}
 
-  /// Intersects @a ray with primitives.
-  virtual Intersection intersectWithPrims(const Ray& ray) const = 0;
+    /// Intersects @a ray with primitives.
+    virtual Intersection intersectWithPrims(const Ray& ray) const = 0;
 };
-
-#endif
