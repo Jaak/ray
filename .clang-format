@@ -1,0 +1,13 @@
+---
+Language: Cpp
+BasedOnStyle: LLVM
+IndentWidth: 4
+DerivePointerAlignment: false
+PointerAlignment: Left
+AccessModifierOffset: -4
+AllowShortBlocksOnASingleLine: false
+AllowShortLoopsOnASingleLine: false
+AlwaysBreakTemplateDeclarations: true
+BreakConstructorInitializersBeforeComma: true
+AlignConsecutiveDeclarations: true
+AllowShortCaseLabelsOnASingleLine: true
