@@ -14,147 +14,142 @@
 #include <string>
 
 Scene::Scene()
-    : m_backgroundLight {nullptr}
-{
-    m_background = m_materials.registerMaterial (Material { Colour { 0, 0, 0 } });
+    : m_backgroundLight{nullptr} {
+    m_background = m_materials.registerMaterial(Material{Colour{0, 0, 0}});
 }
 
 void Scene::setPrimitiveManager(PrimitiveManager* pm) {
-  m_manager = std::unique_ptr<PrimitiveManager>(pm);
+    m_manager = std::unique_ptr<PrimitiveManager>(pm);
 }
 
 void Scene::setBackground(const Colour& c) {
-    m_background = m_materials.registerMaterial (Material { c });
+    m_background = m_materials.registerMaterial(Material{c});
 }
 
-const Material& Scene::background() const {
-    return m_materials[m_background];
-}
+const Material& Scene::background() const { return m_materials[m_background]; }
 
 void Scene::setSceneReader(SceneReader* sr) {
-  m_scene_reader = std::unique_ptr<SceneReader>(sr);
+    m_scene_reader = std::unique_ptr<SceneReader>(sr);
 }
 
-void Scene::setRenderer (Renderer* r) {
-  m_renderer = std::unique_ptr<Renderer>(r);
+void Scene::setRenderer(Renderer* r) {
+    m_renderer = std::unique_ptr<Renderer>(r);
 }
 
-std::string Scene::getFname() {return (*m_scene_reader).getFname();}
+std::string Scene::getFname() { return (*m_scene_reader).getFname(); }
 
-Scene::~Scene() { }
+Scene::~Scene() {}
 
 void Scene::init() {
-  m_scene_reader->init(*this);
-  for (auto& surface : m_surfaces) {
-    surface->init();
-  }
-
-  floating acc = 0.0;
-  for (auto& light : m_lights) {
-    acc += luminance (light->intensity ());
-  }
-
-  if (acc > 0.0) {
-    acc = 1.0 / acc;
-    for (auto& light : m_lights) {
-      light->setSamplingPr(luminance (light->intensity())*acc);
+    m_scene_reader->init(*this);
+    for (auto& surface : m_surfaces) {
+        surface->init();
     }
-  }
 
-  {
-      using namespace boost::posix_time;
-      const auto start_time = microsec_clock::local_time();
-      m_manager->init();
-      const auto td = time_period(start_time, microsec_clock::local_time()).length();
-      std::cout << "Building acceleration structure took " << td << std::endl << std::endl;
-  }
+    floating acc = 0.0;
+    for (auto& light : m_lights) {
+        acc += luminance(light->intensity());
+    }
 
-  m_manager->setSceneSphere (m_sceneSphere);
+    if (acc > 0.0) {
+        acc = 1.0 / acc;
+        for (auto& light : m_lights) {
+            light->setSamplingPr(luminance(light->intensity()) * acc);
+        }
+    }
+
+    using namespace boost::posix_time;
+    const auto start_time = microsec_clock::local_time();
+    m_manager->init();
+    const auto td =
+        time_period(start_time, microsec_clock::local_time()).length();
+    std::cout << "Building acceleration structure took " << td << std::endl
+              << std::endl;
+
+    m_manager->setSceneSphere(m_sceneSphere);
 }
 
 void Scene::addPrimitive(const Primitive* p) { m_manager->addPrimitive(p); }
 
-void Scene::addLight(Light* l) { m_lights.emplace_back (l); }
+void Scene::addLight(Light* l) { m_lights.emplace_back(l); }
 
-const std::vector<std::unique_ptr<Light>>& Scene::lights() const { return m_lights; }
+const std::vector<std::unique_ptr<Light>>& Scene::lights() const {
+    return m_lights;
+}
 
-void Scene::updatePixel (size_t x, size_t y, Colour c) const {
+void Scene::updatePixel(size_t x, size_t y, Colour c) const {
     for (auto& surface : m_surfaces) {
-        surface->setPixel (y, x, c);
+        surface->setPixel(y, x, c);
     }
 }
 
-void Scene::setBackgroundLight (Light* light) {
-    m_backgroundLight = light;
-}
+void Scene::setBackgroundLight(Light* light) { m_backgroundLight = light; }
 
-Light* Scene::backgroundLight () const {
-    return m_backgroundLight;
-}
-
+Light* Scene::backgroundLight() const { return m_backgroundLight; }
 
 void Scene::run() {
     using namespace boost::posix_time;
-    const auto start_time = microsec_clock::local_time();
+    const auto   start_time = microsec_clock::local_time();
     const size_t nP = std::max(boost::thread::hardware_concurrency(), 1u);
     std::cout << "Rendering on " << nP << " threads." << std::endl;
 
-    boost::mutex countMutex;
+    boost::mutex        countMutex;
     boost::thread_group threads;
-    size_t count = 0;
-    bool done = false;
-    const auto width = m_camera.width ();
-    const auto height = m_camera.height ();
+
+    size_t      count = 0;
+    bool        done = false;
+    const auto  width = m_camera.width();
+    const auto  height = m_camera.height();
     Framebuffer frame = {width, height};
 
     // Spawn rendering threads
-    for (size_t i = 0; i < nP; ++ i) {
+    for (size_t i = 0; i < nP; ++i) {
         const auto renderFunc = [&, i]() {
-            auto renderer = m_renderer->clone ();
+            auto renderer = m_renderer->clone();
             for (size_t j = i; j < m_samples; j += nP) {
-                renderer->render (frame, j);
-                frame.flushUpdates ();
-                boost::mutex::scoped_lock scoped_lock (countMutex);
-                ++ count;
+                renderer->render(frame, j);
+                frame.flushUpdates();
+                boost::mutex::scoped_lock scoped_lock(countMutex);
+                ++count;
             }
         };
 
-       threads.create_thread (renderFunc);
+        threads.create_thread(renderFunc);
     }
 
     // Spawn display thread
     const auto displayFunc = [this, &done, &count, &countMutex, &frame]() {
-        while (! done) { // it's ok to use "done" in unsafe manner.
+        while (!done) { // it's ok to use "done" in unsafe manner.
             size_t localCount = 0;
             {
-                boost::mutex::scoped_lock scoped_lock (countMutex);
+                boost::mutex::scoped_lock scoped_lock(countMutex);
                 localCount = count;
             }
 
             if (localCount > 0) {
-                for (size_t x = 0; x < frame.width (); ++ x) {
-                    for (size_t y = 0; y < frame.height (); ++ y) {
-                        const auto c = frame.unsafeGetPixel (x, y);
-                        updatePixel (x, y, c / localCount);
+                for (size_t x = 0; x < frame.width(); ++x) {
+                    for (size_t y = 0; y < frame.height(); ++y) {
+                        const auto c = frame.unsafeGetPixel(x, y);
+                        updatePixel(x, y, c / localCount);
                     }
                 }
             }
 
-            boost::this_thread::sleep (boost::posix_time::seconds (1));
+            boost::this_thread::sleep(boost::posix_time::seconds(1));
         }
     };
 
-    boost::thread displayThread {displayFunc};
+    boost::thread displayThread{displayFunc};
     threads.join_all();
     done = true;
-    displayThread.join ();
+    displayThread.join();
 
     // m_manager->debugDrawOnFramebuffer (m_camera, frame);
 
-    for (size_t x = 0; x < frame.width (); ++ x) {
-        for (size_t y = 0; y < frame.height (); ++ y) {
-            const auto c = frame.unsafeGetPixel (x, y);
-            updatePixel (x, y, c / count);
+    for (size_t x = 0; x < frame.width(); ++x) {
+        for (size_t y = 0; y < frame.height(); ++y) {
+            const auto c = frame.unsafeGetPixel(x, y);
+            updatePixel(x, y, c / count);
         }
     }
 
