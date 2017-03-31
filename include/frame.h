@@ -12,11 +12,15 @@ private:
         const Vector dir;
     };
 
-    explicit Frame(Normalised n)
-        : m_z{n.dir}
-        , m_y{pickOrthogonal(m_z)}
-        , m_x{m_y.cross(m_z)}
-    {}
+    explicit Frame(Normalised norm) {
+        const auto n = norm.dir;
+        const auto sign = std::copysign(floating(1.0f), n.z);
+        const auto a = - floating(1.0f) / (sign + n.z);
+        const auto b = n.x * n.y * a;
+        m_z = n;
+        m_y = Vector(floating(1.0f) + sign * n.x * n.x * a, sign * b, -sign * n.x);
+        m_x = Vector(b, sign + n.y * n.y * a, -n.y);
+    }
 
 public: /* Methods: */
 
@@ -33,9 +37,7 @@ public: /* Methods: */
     {}
 
     explicit Frame(Vector dir)
-        : m_z{normalised(dir)}
-        , m_y{pickOrthogonal(m_z)}
-        , m_x{m_y.cross(m_z)}
+        : Frame{Normalised{normalised(dir)}}
     {}
 
     Vector toWorld(Vector v) const { return v.x * m_x + v.y * m_y + v.z * m_z; }
